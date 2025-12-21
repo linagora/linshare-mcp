@@ -64,31 +64,47 @@ def list_my_documents() -> str:
 @mcp.tool()
 def share_my_documents(
     document_uuids: list[str],
+    recipients: list[dict] | None = None,
     recipient_emails: list[str] | None = None,
-    mailing_list_uuid: str | None = None,
-    subject: str | None = None,
-    message: str | None = None,
-    expiration_date: str | None = None,
+    mailing_list_uuids: list[str] | None = None,
+    subject: str = "",
+    message: str = "",
+    expiration_date: str | int | None = None,
     secured: bool = False,
-    creation_acknowledgement: bool = False
+    creation_acknowledgement: bool = False,
+    force_anonymous_sharing: bool = False,
+    enable_usda: bool = False,
+    notification_date_usda: str | int | None = None,
+    sharing_note: str = "",
+    in_reply_to: str | None = None,
+    references: str | None = None,
+    external_mail_locale: str = "ENGLISH"
 ) -> str:
-    """[USER API] Share documents from your personal space with other users.
+    """[USER API] Share documents from your personal space with other users (User API v5).
     
     🔐 Authentication: JWT token required (use login_user or set LINSHARE_JWT_TOKEN)
-    🌐 API Endpoint: User v5 (/{user_uuid}/shares)
+    🌐 API Endpoint: User v5 (/shares)
     
     Args:
         document_uuids: List of document UUIDs to share (required)
-        recipient_emails: List of recipient email addresses (at least one of recipient_emails or mailing_list_uuid required)
-        mailing_list_uuid: UUID of mailing list to share with (alternative to recipient_emails)
+        recipients: List of recipient objects: [{"firstName": "...", "lastName": "...", "mail": "...", "domain": "..."}]
+        recipient_emails: Simple list of emails (will be converted to basic recipient objects)
+        mailing_list_uuids: List of mailing list UUIDs to share with
         subject: Subject line for the share notification
         message: Custom message to include with the share
-        expiration_date: Expiration date in ISO format (e.g., "2025-12-31T23:59:59Z")
-        secured: Whether to require password protection (default: False)
-        creation_acknowledgement: Send acknowledgement to sender (default: False)
+        expiration_date: Expiration date (ISO string or timestamp)
+        secured: Whether to require password protection
+        creation_acknowledgement: Send acknowledgement to sender
+        force_anonymous_sharing: Force anonymous sharing
+        enable_usda: Enable USDA (User Selected Delivery Acknowledgement)
+        notification_date_usda: Notification date for USDA
+        sharing_note: Internal note for the share
+        in_reply_to: In-reply-to header value for notification email
+        references: References header value for notification email
+        external_mail_locale: Locale for external mail (default: "ENGLISH")
     
     Returns:
-        JSON string with share creation result
+        Formatted share result
     """
     logger.info(f"Tool called: share_my_documents({len(document_uuids)} documents)")
     
@@ -96,37 +112,46 @@ def share_my_documents(
         return "Error: LINSHARE_USER_URL not configured."
     
     # Validate that at least one recipient method is provided
-    if not recipient_emails and not mailing_list_uuid:
-        return "Error: Either recipient_emails or mailing_list_uuid must be provided."
+    if not recipients and not recipient_emails and not mailing_list_uuids:
+        return "Error: Either recipients, recipient_emails or mailing_list_uuids must be provided."
     
     try:
         # Ensure user is logged in
         if not auth_manager.is_logged_in():
             return "Error: User not logged in. Please use 'user_login_user' tool first or set LINSHARE_JWT_TOKEN."
             
-        user_info = auth_manager.get_user_info()
-        if not user_info or 'uuid' not in user_info:
-            return "Error: Could not determine user UUID from session."
-        user_uuid = user_info['uuid']
-
-        url = f"{LINSHARE_USER_URL}/{user_uuid}/shares"
+        url = f"{LINSHARE_USER_URL}/shares"
         
         # Build request body
         payload = {
             "documents": document_uuids,
             "secured": secured,
-            "creationAcknowledgement": creation_acknowledgement
+            "creationAcknowledgement": creation_acknowledgement,
+            "forceAnonymousSharing": force_anonymous_sharing,
+            "enableUSDA": enable_usda,
+            "sharingNote": sharing_note,
+            "subject": subject,
+            "message": message,
+            "externalMailLocale": external_mail_locale,
+            "mailingListUuid": mailing_list_uuids or []
         }
         
+        # Handle recipients
+        final_recipients = recipients or []
         if recipient_emails:
-            payload["recipients"] = [{"mail": email} for email in recipient_emails]
+            for email in recipient_emails:
+                final_recipients.append({"mail": email})
+        payload["recipients"] = final_recipients
         
-        if mailing_list_uuid:
-            payload["mailingListUuid"] = mailing_list_uuid
+        # Add optional dates
+        if expiration_date:
+            payload["expirationDate"] = expiration_date
+        if notification_date_usda:
+            payload["notificationDateForUSDA"] = notification_date_usda
         
-        if subject: payload["subject"] = subject
-        if message: payload["message"] = message
-        if expiration_date: payload["expirationDate"] = expiration_date
+        # Add email thread info if provided
+        if in_reply_to: payload["inReplyTo"] = in_reply_to
+        if references: payload["references"] = references
         
         response = requests.post(
             url,
@@ -139,7 +164,7 @@ def share_my_documents(
         share_data = response.json()
         
         # Format the response
-        result = f"Documents Shared Successfully:\n"
+        result = "✅ Documents Shared Successfully!\n"
         shares = share_data if isinstance(share_data, list) else [share_data]
         
         for i, share in enumerate(shares, 1):
@@ -152,7 +177,16 @@ def share_my_documents(
         
     except requests.RequestException as e:
         logger.error(f"Error sharing documents: {str(e)}")
-        return f"Error sharing documents: {str(e)}"
+        # Try to extract more helpful error message from response if available
+        error_msg = str(e)
+        if hasattr(e, 'response') and e.response is not None:
+            try:
+                error_body = e.response.json()
+                if 'message' in error_body:
+                    error_msg = error_body['message']
+            except:
+                pass
+        return f"Error sharing documents: {error_msg}"
     except Exception as e:
         return f"Error: {str(e)}"
 
