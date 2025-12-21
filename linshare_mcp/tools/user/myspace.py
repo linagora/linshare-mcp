@@ -28,7 +28,7 @@ def list_my_documents() -> str:
             return "Error: User not logged in. Please use 'user_login_user' tool first or set LINSHARE_JWT_TOKEN."
 
         url = f"{LINSHARE_USER_URL}/documents"
-        auth_header = auth_manager.get_auth_header()
+        auth_header = auth_manager.get_user_header()
         response = requests.get(
             url,
             headers=auth_header,
@@ -131,7 +131,7 @@ def share_my_documents(
         response = requests.post(
             url,
             json=payload,
-            headers=auth_manager.get_auth_header(),
+            headers=auth_manager.get_user_header(),
             timeout=30
         )
         response.raise_for_status()
@@ -209,7 +209,7 @@ def upload_document_to_my_space(
             url,
             params=params,
             json=payload,
-            headers=auth_manager.get_auth_header(),
+            headers=auth_manager.get_user_header(),
             timeout=60
         )
         response.raise_for_status()
@@ -273,7 +273,7 @@ def upload_file_from_local_directory(
 
     try:
         # Get auth header (will raise error if not logged in)
-        auth_header = auth_manager.get_auth_header()
+        auth_header = auth_manager.get_user_header()
         
         file_path = LINSHARE_UPLOAD_DIR / filename
         

@@ -1,9 +1,9 @@
 import requests
-from requests.auth import HTTPBasicAuth
 from ...app import mcp
-from ...config import LINSHARE_ADMIN_URL as LINSHARE_BASE_URL, LINSHARE_USERNAME, LINSHARE_PASSWORD
+from ...config import LINSHARE_ADMIN_URL as LINSHARE_BASE_URL
 from ...utils.logging import logger
 from ...utils.common import format_file_size
+from ...utils.auth import auth_manager
 
 @mcp.tool()
 def list_user_documents(user_uuid: str) -> str:
@@ -20,15 +20,13 @@ def list_user_documents(user_uuid: str) -> str:
     if not LINSHARE_BASE_URL:
         return "Error: LINSHARE_ADMIN_URL not configured."
 
-    if not LINSHARE_USERNAME or not LINSHARE_PASSWORD:
-        return "Error: LinShare credentials not configured."
-
     try:
         url = f"{LINSHARE_BASE_URL}/{user_uuid}/documents"
+        admin_auth = auth_manager.get_admin_auth()
 
         response = requests.get(
             url,
-            auth=HTTPBasicAuth(LINSHARE_USERNAME, LINSHARE_PASSWORD),
+            auth=admin_auth,
             headers={'accept': 'application/json'},
             timeout=10
         )
@@ -111,10 +109,12 @@ def share_documents(
         if message: payload["message"] = message
         if expiration_date: payload["expirationDate"] = expiration_date
         
+        admin_auth = auth_manager.get_admin_auth()
+
         response = requests.post(
             url,
             json=payload,
-            auth=HTTPBasicAuth(LINSHARE_USERNAME, LINSHARE_PASSWORD),
+            auth=admin_auth,
             headers={
                 'accept': 'application/json',
                 'Content-Type': 'application/json'
@@ -173,11 +173,13 @@ def upload_document_to_personal_space(
         payload = {"url": document_url, "fileName": file_name}
         if file_size is not None: payload["size"] = file_size
         
+        admin_auth = auth_manager.get_admin_auth()
+
         response = requests.post(
             url,
             params=params,
             json=payload,
-            auth=HTTPBasicAuth(LINSHARE_USERNAME, LINSHARE_PASSWORD),
+            auth=admin_auth,
             headers={
                 'accept': 'application/json',
                 'Content-Type': 'application/json'

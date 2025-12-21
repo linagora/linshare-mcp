@@ -33,7 +33,7 @@ def user_create_my_shared_space(
     
     # Get auth header (this will raise error if not logged in)
     try:
-        auth_header = auth_manager.get_auth_header()
+        auth_header = auth_manager.get_user_header()
     except ValueError as e:
         return f"Error: {str(e)}"
     
@@ -116,7 +116,7 @@ def user_list_my_shared_spaces() -> str:
         return "Error: LINSHARE_USER_URL not configured."
     
     try:
-        auth_header = auth_manager.get_auth_header()
+        auth_header = auth_manager.get_user_header()
         current_user = auth_manager.get_current_user()
         if not current_user or not current_user.get('uuid'):
             return "Error: Current user UUID not found. Please login."
@@ -191,7 +191,7 @@ def user_list_my_workgroup_entries(workgroup_uuid: str) -> str:
         return "Error: LINSHARE_USER_URL not configured."
     
     try:
-        auth_header = auth_manager.get_auth_header()
+        auth_header = auth_manager.get_user_header()
         current_user = auth_manager.get_current_user()
         if not current_user or not current_user.get('uuid'):
              return "Error: Current user UUID not found. Please login."
@@ -264,7 +264,7 @@ def user_upload_file_to_my_workgroup(
         return "Error: LINSHARE_USER_URL not configured."
     
     try:
-        auth_header = auth_manager.get_auth_header()
+        auth_header = auth_manager.get_user_header()
         current_user = auth_manager.get_current_user()
         if not current_user or not current_user.get('uuid'):
              return "Error: Current user UUID not found. Please login."
@@ -337,7 +337,7 @@ def user_add_member_to_my_workspace(
         return "Error: LINSHARE_USER_URL not configured."
         
     try:
-        auth_header = auth_manager.get_auth_header()
+        auth_header = auth_manager.get_user_header()
         current_user = auth_manager.get_current_user()
         if not current_user or not current_user.get('uuid'):
              return "Error: Current user UUID not found. Please login."
@@ -406,7 +406,7 @@ def user_remove_member_from_my_workspace(membership_uuid: str) -> str:
         return "Error: LINSHARE_USER_URL not configured."
         
     try:
-        auth_header = auth_manager.get_auth_header()
+        auth_header = auth_manager.get_user_header()
         current_user = auth_manager.get_current_user()
         if not current_user or not current_user.get('uuid'):
              return "Error: Current user UUID not found. Please login."

@@ -34,7 +34,7 @@ def user_view_my_audit_logs(
         return "Error: LINSHARE_USER_URL not configured."
         
     try:
-        auth_header = auth_manager.get_auth_header()
+        auth_header = auth_manager.get_user_header()
         current_user = auth_manager.get_current_user()
         if not current_user or not current_user.get('uuid'):
             return "Error: Current user UUID not found. Please login."

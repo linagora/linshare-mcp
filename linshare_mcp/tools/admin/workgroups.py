@@ -1,11 +1,11 @@
 import requests
 import json
-from requests.auth import HTTPBasicAuth
 from datetime import datetime
 from ...app import mcp
-from ...config import LINSHARE_ADMIN_URL as LINSHARE_BASE_URL, LINSHARE_USERNAME, LINSHARE_PASSWORD, LINSHARE_UPLOAD_DIR, COMMON_ROLES
+from ...config import LINSHARE_ADMIN_URL as LINSHARE_BASE_URL, LINSHARE_UPLOAD_DIR, COMMON_ROLES
 from ...utils.logging import logger
 from ...utils.common import format_file_size, guess_mime_type, get_role_uuid
+from ...utils.auth import auth_manager
 
 @mcp.tool()
 def upload_file_to_workgroup(
@@ -35,8 +35,6 @@ def upload_file_to_workgroup(
     
     if not LINSHARE_BASE_URL:
         return "Error: LINSHARE_ADMIN_URL not configured."
-    if not LINSHARE_USERNAME or not LINSHARE_PASSWORD:
-        return "Error: LinShare credentials not configured."
     
     try:
         file_path = LINSHARE_UPLOAD_DIR / filename
@@ -78,12 +76,14 @@ def upload_file_to_workgroup(
             if description:
                 data['description'] = description
             
+            admin_auth = auth_manager.get_admin_auth()
+            
             response = requests.post(
                 url,
                 params=params,
                 files=files,
                 data=data,
-                auth=HTTPBasicAuth(LINSHARE_USERNAME, LINSHARE_PASSWORD),
+                auth=admin_auth,
                 headers={
                     'accept': 'application/json',
                 },
@@ -149,10 +149,11 @@ def list_workgroup_entries(
     
     try:
         url = f"{LINSHARE_BASE_URL}/{actor_uuid}/workgroups/{workgroup_uuid}/entries"
+        admin_auth = auth_manager.get_admin_auth()
         
         response = requests.get(
             url,
-            auth=HTTPBasicAuth(LINSHARE_USERNAME, LINSHARE_PASSWORD),
+            auth=admin_auth,
             headers={'accept': 'application/json'},
             timeout=10
         )
@@ -225,11 +226,12 @@ def list_shared_space_nodes(user_uuid: str, with_role: bool = False) -> str:
     try:
         url = f"{LINSHARE_BASE_URL}/{user_uuid}/shared_space_nodes"
         params = {'withRole': str(with_role).lower()}
+        admin_auth = auth_manager.get_admin_auth()
         
         response = requests.get(
             url,
             params=params,
-            auth=HTTPBasicAuth(LINSHARE_USERNAME, LINSHARE_PASSWORD),
+            auth=admin_auth,
             headers={'accept': 'application/json'},
             timeout=10
         )
@@ -275,10 +277,11 @@ def list_user_shared_spaces(actor_uuid: str) -> str:
     
     try:
         url = f"{LINSHARE_BASE_URL}/{actor_uuid}/shared_space_members"
+        admin_auth = auth_manager.get_admin_auth()
         
         response = requests.get(
             url,
-            auth=HTTPBasicAuth(LINSHARE_USERNAME, LINSHARE_PASSWORD),
+            auth=admin_auth,
             headers={'accept': 'application/json'},
             timeout=30
         )
@@ -357,10 +360,12 @@ def create_shared_space(
         if parent_uuid: payload["parentUuid"] = parent_uuid
         if description: payload["description"] = description
         
+        admin_auth = auth_manager.get_admin_auth()
+        
         response = requests.post(
             url,
             json=payload,
-            auth=HTTPBasicAuth(LINSHARE_USERNAME, LINSHARE_PASSWORD),
+            auth=admin_auth,
             headers={'accept': 'application/json', 'Content-Type': 'application/json'},
             timeout=10
         )
@@ -428,13 +433,15 @@ def add_workspace_member(
         
         # Get workspace details
         workspace_url = f"{LINSHARE_BASE_URL}/{actor_uuid}/shared_spaces/{workspace_uuid}"
-        ws_res = requests.get(workspace_url, auth=HTTPBasicAuth(LINSHARE_USERNAME, LINSHARE_PASSWORD), headers={'accept': 'application/json'}, timeout=30)
+        admin_auth = auth_manager.get_admin_auth()
+        ws_res = requests.get(workspace_url, auth=admin_auth, headers={'accept': 'application/json'}, timeout=30)
         if ws_res.status_code != 200: return f"Error fetching workspace: {ws_res.status_code}"
         ws_data = ws_res.json()
         
         # Get account details
         acc_url = f"{LINSHARE_BASE_URL}/users/{mail}"
-        acc_res = requests.get(acc_url, auth=HTTPBasicAuth(LINSHARE_USERNAME, LINSHARE_PASSWORD), headers={'accept': 'application/json'}, timeout=30)
+        # admin_auth already defined above
+        acc_res = requests.get(acc_url, auth=admin_auth, headers={'accept': 'application/json'}, timeout=30)
         if acc_res.status_code != 200: return f"Error fetching account: {acc_res.status_code}"
         acc_data = acc_res.json()
         
@@ -449,7 +456,7 @@ def add_workspace_member(
         url = f"{LINSHARE_BASE_URL}/{actor_uuid}/shared_space_members"
         response = requests.post(
             url,
-            auth=HTTPBasicAuth(LINSHARE_USERNAME, LINSHARE_PASSWORD),
+            auth=admin_auth,
             headers={'accept': 'application/json', 'Content-Type': 'application/json'},
             data=json.dumps(payload),
             timeout=30
@@ -483,7 +490,8 @@ def remove_workspace_member(
     
     try:
         url = f"{LINSHARE_BASE_URL}/{actor_uuid}/shared_space_members/{membership_uuid}"
-        response = requests.delete(url, auth=HTTPBasicAuth(LINSHARE_USERNAME, LINSHARE_PASSWORD), timeout=30)
+        admin_auth = auth_manager.get_admin_auth()
+        response = requests.delete(url, auth=admin_auth, timeout=30)
         if response.status_code not in [200, 204]: return f"Failed to remove member: {response.status_code}"
         return f"✅ Member removed successfully (Membership UUID: {membership_uuid})."
     except Exception as e:
@@ -520,11 +528,13 @@ def add_document_to_workgroup(
         params = {'async': str(async_upload).lower(), 'strict': str(strict).lower()}
         payload = {"url": document_url, "fileName": file_name}
         
+        admin_auth = auth_manager.get_admin_auth()
+        
         response = requests.post(
             url,
             params=params,
             json=payload,
-            auth=HTTPBasicAuth(LINSHARE_USERNAME, LINSHARE_PASSWORD),
+            auth=admin_auth,
             headers={'accept': 'application/json', 'Content-Type': 'application/json'},
             timeout=30
         )

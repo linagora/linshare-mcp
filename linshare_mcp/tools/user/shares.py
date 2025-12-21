@@ -22,7 +22,7 @@ def user_list_my_received_shares() -> str:
         return "Error: LINSHARE_USER_URL not configured."
         
     try:
-        auth_header = auth_manager.get_auth_header()
+        auth_header = auth_manager.get_user_header()
         current_user = auth_manager.get_current_user()
         if not current_user or not current_user.get('uuid'):
             return "Error: Current user UUID not found. Please login."
@@ -88,7 +88,7 @@ def user_copy_received_share_to_my_space(share_uuid: str) -> str:
         return "Error: LINSHARE_USER_URL not configured."
         
     try:
-        auth_header = auth_manager.get_auth_header()
+        auth_header = auth_manager.get_user_header()
         current_user = auth_manager.get_current_user()
         if not current_user or not current_user.get('uuid'):
             return "Error: Current user UUID not found. Please login."

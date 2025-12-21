@@ -35,7 +35,7 @@ def list_guests(role: str | None = None) -> str:
         if not auth_manager.is_logged_in():
             return "Error: User not logged in. Please use 'user_login_user' tool first or set LINSHARE_JWT_TOKEN."
 
-        auth_header = auth_manager.get_auth_header()
+        auth_header = auth_manager.get_user_header()
         
         # Base URL /guests for user API v5
         url = f"{LINSHARE_USER_URL}/guests"
@@ -109,7 +109,7 @@ def user_create_guest(
         if not auth_manager.is_logged_in():
             return "Error: User not logged in. Please use 'user_login_user' tool first or set LINSHARE_JWT_TOKEN."
 
-        auth_header = auth_manager.get_auth_header()
+        auth_header = auth_manager.get_user_header()
         current_user = auth_manager.get_current_user()
         
         if not current_user or not current_user.get('uuid'):

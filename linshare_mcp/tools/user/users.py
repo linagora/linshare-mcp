@@ -24,7 +24,7 @@ def user_search_users(pattern: str) -> str:
         return "Error: LINSHARE_USER_URL not configured."
         
     try:
-        auth_header = auth_manager.get_auth_header()
+        auth_header = auth_manager.get_user_header()
         
         url = f"{LINSHARE_USER_URL}/users"
         params = {'pattern': pattern}

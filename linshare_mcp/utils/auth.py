@@ -91,14 +91,24 @@ class AuthManager:
         """Get the current user info (alias for get_user_info)."""
         return self.user_info
 
-    def get_auth_header(self) -> Dict[str, str]:
-        """Get the Authorization header for requests."""
+    def get_user_header(self) -> Dict[str, str]:
+        """Get the Authorization header for user JWT requests."""
         if not self.token:
             raise ValueError("User not logged in. Please use the 'login_user' tool first.")
         return {
             'Authorization': f'Bearer {self.token}',
             'accept': 'application/json'
         }
+
+    def get_admin_auth(self) -> Any:
+        """Get the HTTPBasicAuth object for admin requests."""
+        from ..config import LINSHARE_USERNAME, LINSHARE_PASSWORD
+        from requests.auth import HTTPBasicAuth
+        
+        if not LINSHARE_USERNAME or not LINSHARE_PASSWORD:
+            raise ValueError("LinShare admin credentials not configured in environment (LINSHARE_USERNAME/PASSWORD).")
+            
+        return HTTPBasicAuth(LINSHARE_USERNAME, LINSHARE_PASSWORD)
 
     def is_logged_in(self) -> bool:
         return self.token is not None

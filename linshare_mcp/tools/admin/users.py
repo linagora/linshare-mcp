@@ -1,9 +1,9 @@
 import requests
-from requests.auth import HTTPBasicAuth
 from urllib.parse import quote
 from ...app import mcp
-from ...config import LINSHARE_ADMIN_URL as LINSHARE_BASE_URL, LINSHARE_USERNAME, LINSHARE_PASSWORD
+from ...config import LINSHARE_ADMIN_URL as LINSHARE_BASE_URL
 from ...utils.logging import logger
+from ...utils.auth import auth_manager
 
 @mcp.tool()
 def get_user_domain(email: str) -> str:
@@ -20,17 +20,15 @@ def get_user_domain(email: str) -> str:
     if not LINSHARE_BASE_URL:
         return "Error: LINSHARE_ADMIN_URL not configured."
     
-    if not LINSHARE_USERNAME or not LINSHARE_PASSWORD:
-        return "Error: LinShare credentials not configured."
-    
     try:
         encoded_email = quote(email, safe='')
         
         url = f"{LINSHARE_BASE_URL}/users/{encoded_email}"
+        admin_auth = auth_manager.get_admin_auth()
         
         response = requests.get(
             url,
-            auth=HTTPBasicAuth(LINSHARE_USERNAME, LINSHARE_PASSWORD),
+            auth=admin_auth,
             headers={'accept': 'application/json'},
             timeout=10
         )
