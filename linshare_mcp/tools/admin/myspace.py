@@ -84,8 +84,6 @@ def share_documents(
     if not LINSHARE_BASE_URL:
         return "Error: LINSHARE_ADMIN_URL not configured."
     
-    if not LINSHARE_USERNAME or not LINSHARE_PASSWORD:
-        return "Error: LinShare credentials not configured."
     
     if not recipient_emails and not mailing_list_uuid:
         return "Error: Either recipient_emails or mailing_list_uuid must be provided."
@@ -164,8 +162,6 @@ def upload_document_to_personal_space(
     if not LINSHARE_BASE_URL:
         return "Error: LINSHARE_ADMIN_URL not configured."
     
-    if not LINSHARE_USERNAME or not LINSHARE_PASSWORD:
-        return "Error: LinShare credentials not configured."
     
     try:
         url = f"{LINSHARE_BASE_URL}/{user_uuid}/documents"

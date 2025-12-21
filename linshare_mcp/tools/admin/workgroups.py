@@ -144,8 +144,6 @@ def list_workgroup_entries(
     
     if not LINSHARE_BASE_URL:
         return "Error: LINSHARE_ADMIN_URL not configured."
-    if not LINSHARE_USERNAME or not LINSHARE_PASSWORD:
-        return "Error: LinShare credentials not configured."
     
     try:
         url = f"{LINSHARE_BASE_URL}/{actor_uuid}/workgroups/{workgroup_uuid}/entries"
@@ -220,8 +218,6 @@ def list_shared_space_nodes(user_uuid: str, with_role: bool = False) -> str:
     
     if not LINSHARE_BASE_URL:
         return "Error: LINSHARE_ADMIN_URL not configured."
-    if not LINSHARE_USERNAME or not LINSHARE_PASSWORD:
-        return "Error: LinShare credentials not configured."
     
     try:
         url = f"{LINSHARE_BASE_URL}/{user_uuid}/shared_space_nodes"
@@ -272,8 +268,6 @@ def list_user_shared_spaces(actor_uuid: str) -> str:
     
     if not LINSHARE_BASE_URL:
         return "Error: LINSHARE_ADMIN_URL not configured."
-    if not LINSHARE_USERNAME or not LINSHARE_PASSWORD:
-        return "Error: LinShare credentials not configured."
     
     try:
         url = f"{LINSHARE_BASE_URL}/{actor_uuid}/shared_space_members"
@@ -347,8 +341,6 @@ def create_shared_space(
     
     if not LINSHARE_BASE_URL:
         return "Error: LINSHARE_ADMIN_URL not configured."
-    if not LINSHARE_USERNAME or not LINSHARE_PASSWORD:
-        return "Error: LinShare credentials not configured."
     
     valid_types = ["WORK_SPACE", "WORK_GROUP"]
     if node_type not in valid_types:
@@ -424,8 +416,6 @@ def add_workspace_member(
     
     if not LINSHARE_BASE_URL:
         return "Error: LINSHARE_ADMIN_URL not configured."
-    if not LINSHARE_USERNAME or not LINSHARE_PASSWORD:
-        return "Error: LinShare credentials not configured."
     
     try:
         role_uuid = get_role_uuid(role_name)
@@ -485,8 +475,6 @@ def remove_workspace_member(
     
     if not LINSHARE_BASE_URL:
         return "Error: LINSHARE_ADMIN_URL not configured."
-    if not LINSHARE_USERNAME or not LINSHARE_PASSWORD:
-        return "Error: LinShare credentials not configured."
     
     try:
         url = f"{LINSHARE_BASE_URL}/{actor_uuid}/shared_space_members/{membership_uuid}"
@@ -520,8 +508,6 @@ def add_document_to_workgroup(
     
     if not LINSHARE_BASE_URL:
         return "Error: LINSHARE_ADMIN_URL not configured."
-    if not LINSHARE_USERNAME or not LINSHARE_PASSWORD:
-        return "Error: LinShare credentials not configured."
     
     try:
         url = f"{LINSHARE_BASE_URL}/{user_uuid}/workgroups/{workgroup_uuid}/entries/url"
