@@ -67,3 +67,37 @@ def user_get_current_user_info() -> str:
     result += f"Role: {user_info.get('role', '')}\n"
     
     return result
+@mcp.tool()
+def user_check_config() -> str:
+    """[COMMON] Check if the server has detected the necessary environment variables.
+    
+    This tool helps verify if the server is correctly configured (e.g., in Claude Desktop).
+    It checks for the presence of URLs and the JWT token without revealing secrets.
+    
+    Returns:
+        A report of the current configuration status.
+    """
+    import os
+    from ...config import LINSHARE_USER_URL, LINSHARE_ADMIN_URL, LINSHARE_JWT_TOKEN
+    
+    results = ["LinShare Server Configuration Status:\n"]
+    
+    # Check URLs
+    results.append(f"🌐 USER API URL: {'✅ SET' if LINSHARE_USER_URL else '❌ MISSING'}")
+    results.append(f"🌐 ADMIN API URL: {'✅ SET' if LINSHARE_ADMIN_URL else '❌ MISSING'}")
+    
+    # Check JWT Token
+    results.append(f"🔑 JWT Token: {'✅ DETECTED in environment' if LINSHARE_JWT_TOKEN else '❌ NOT FOUND (Login required)'}")
+    
+    # Check current session
+    if auth_manager.is_logged_in():
+        results.append("🟢 Session Status: AUTHENTICATED")
+        user = auth_manager.get_user_info()
+        if user:
+            results.append(f"👤 Logged in as: {user.get('mail')} ({user.get('firstName')} {user.get('lastName')})")
+    else:
+        results.append("🔴 Session Status: NOT AUTHENTICATED")
+
+    results.append("\nTip: If variables are missing, ensure you've updated your Claude Desktop config and fully RESTARTED the application.")
+    
+    return "\n".join(results)

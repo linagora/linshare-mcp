@@ -81,20 +81,30 @@ def user_create_guest(
     email: str,
     first_name: str,
     last_name: str,
-    can_upload: bool = False,
-    expiration_date: str | None = None
+    can_upload: bool = True,
+    restricted: bool = True,
+    comment: str = "",
+    expiration_date: str | int | None = None,
+    restricted_contacts: list[dict] | None = None,
+    restricted_contact_lists: list[dict] | None = None,
+    contact_list_view_permissions: dict[str, bool] | None = None
 ) -> str:
-    """[USER API] Create a new guest account.
+    """[USER API] Create a new guest account with advanced restrictions (contacts and lists).
     
     🔐 Authentication: JWT token required (use login_user or set LINSHARE_JWT_TOKEN)
-    🌐 API Endpoint: User v5
+    🌐 API Endpoint: User v5 (/users/{uuid}/guests)
     
     Args:
         email: Guest email address
         first_name: Guest first name
         last_name: Guest last name
-        can_upload: Allow guest to upload files (default: False)
-        expiration_date: Expiration date in ISO format (optional)
+        can_upload: Allow guest to upload files (default: True)
+        restricted: Restrict guest contacts (default: True)
+        comment: Optional description/note for the guest
+        expiration_date: Expiration date (millisecond timestamp or ISO date string)
+        restricted_contacts: List of extra contacts to share with the guest: [{"firstName": "...", "lastName": "...", "domain": "...", "mail": "..."}]
+        restricted_contact_lists: List of contact lists to share: [{"name": "...", "uuid": "..."}]
+        contact_list_view_permissions: Permissions for each list: {"list_uuid": false}
     
     Returns:
         Confirmation with guest details
@@ -105,6 +115,8 @@ def user_create_guest(
         return "Error: LINSHARE_USER_URL not configured."
         
     try:
+        from datetime import datetime, timezone
+        
         # Ensure user is logged in
         if not auth_manager.is_logged_in():
             return "Error: User not logged in. Please use 'user_login_user' tool first or set LINSHARE_JWT_TOKEN."
@@ -116,17 +128,49 @@ def user_create_guest(
             return "Error: Current user UUID not found. Please login."
         
         user_uuid = current_user['uuid']
-        url = f"{LINSHARE_USER_URL}/{user_uuid}/guests"
-        
+        url = f"{LINSHARE_USER_URL}/guests"
+        # Determine expiration timestamp
+        expires = expiration_date
+        if isinstance(expires, str):
+            try:
+                dt = datetime.fromisoformat(expires.replace('Z', '+00:00'))
+                if dt.tzinfo is None: dt = dt.replace(tzinfo=timezone.utc)
+                expires = int(dt.timestamp() * 1000)
+            except: pass
+
         payload = {
-            "mail": email,
+            "canUpload": can_upload,
+            "comment": comment,
             "firstName": first_name,
             "lastName": last_name,
-            "canUpload": can_upload
+            "mail": email,
+            "restricted": restricted
         }
         
-        if expiration_date:
-            payload["expirationDate"] = expiration_date
+        if expires:
+            payload["expirationDate"] = expires
+
+        if restricted:
+            owner_contact = {
+                "firstName": current_user.get('firstName', ''),
+                "lastName": current_user.get('lastName', ''),
+                "domain": current_user.get('domain', ''),
+                "mail": current_user.get('mail', '')
+            }
+            if restricted_contacts:
+                if not any(c.get('mail') == owner_contact['mail'] for c in restricted_contacts):
+                    restricted_contacts.insert(0, owner_contact)
+            else:
+                restricted_contacts = [owner_contact]
+
+        if restricted_contacts:
+            payload["restrictedContacts"] = restricted_contacts
+            
+        if restricted_contact_lists:
+            payload["restrictedContactList"] = restricted_contact_lists
+            
+        if contact_list_view_permissions:
+            payload["contactListViewPermissions"] = contact_list_view_permissions
         
         response = requests.post(
             url,
@@ -143,8 +187,67 @@ def user_create_guest(
         result += f"Email: {guest.get('mail')}\n"
         result += f"UUID: {guest.get('uuid')}\n"
         
+        if guest.get('restrictedContacts'):
+            result += f"Restricted Contacts: {len(guest['restrictedContacts'])}\n"
+        if guest.get('restrictedContactList'):
+            result += f"Restricted Lists: {len(guest['restrictedContactList'])}\n"
+            
         return result
         
+    except requests.RequestException as e:
+        logger.error(f"Error creating guest: {str(e)}")
+        error_msg = str(e)
+        if hasattr(e, 'response') and e.response is not None:
+            error_msg = f"API Error {e.response.status_code}: {e.response.text}"
+        return f"Error creating guest: {error_msg}"
     except Exception as e:
         logger.error(f"Error creating guest: {e}")
+        return f"Error: {str(e)}"
+
+@mcp.tool()
+def user_delete_guest(guest_uuid: str) -> str:
+    """[USER API] Delete a guest account.
+    
+    🔐 Authentication: JWT token required (use login_user or set LINSHARE_JWT_TOKEN)
+    🌐 API Endpoint: User v5 (/guests/{guest_uuid})
+    
+    Args:
+        guest_uuid: UUID of the guest to delete
+        
+    Returns:
+        Confirmation of deletion
+    """
+    logger.info(f"Tool called: user_delete_guest({guest_uuid})")
+    
+    if not LINSHARE_USER_URL:
+        return "Error: LINSHARE_USER_URL not configured."
+        
+    try:
+        # Ensure user is logged in
+        if not auth_manager.is_logged_in():
+            return "Error: User not logged in. Please use 'user_login_user' tool first or set LINSHARE_JWT_TOKEN."
+
+        auth_header = auth_manager.get_user_header()
+        
+        url = f"{LINSHARE_USER_URL}/guests/{guest_uuid}"
+        
+        response = requests.delete(
+            url,
+            headers=auth_header,
+            timeout=10
+        )
+        response.raise_for_status()
+        
+        return f"✅ Guest ({guest_uuid}) deleted successfully."
+        
+    except requests.RequestException as e:
+        logger.error(f"Error deleting guest: {str(e)}")
+        error_msg = str(e)
+        if hasattr(e, 'response') and e.response is not None:
+             try:
+                error_msg = f"API Error {e.response.status_code}: {e.response.text}"
+             except: pass
+        return f"Error deleting guest: {error_msg}"
+    except Exception as e:
+        logger.error(f"Error deleting guest: {e}")
         return f"Error: {str(e)}"

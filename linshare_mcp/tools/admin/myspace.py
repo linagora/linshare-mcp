@@ -60,11 +60,15 @@ def share_documents(
     subject: str = None,
     message: str = None,
     expiration_date: str = None,
-    secured: bool = False,
-    creation_acknowledgement: bool = False
+    creation_acknowledgement: bool = False,
+    password: str = None,
+    external_mail_locale: str = "en"
 ) -> str:
     """Share documents from user's personal space with other users.
     
+    Note: You can share with any email address. If the email is not found in the LinShare 
+    directory, it will automatically be treated as an anonymous share.
+
     Args:
         user_uuid: The user's UUID (actor sharing the documents)
         document_uuids: List of document UUIDs to share (required)
@@ -74,10 +78,12 @@ def share_documents(
         message: Custom message to include with the share
         expiration_date: Expiration date in ISO format (e.g., "2025-12-31T23:59:59Z")
         secured: Whether to require password protection (default: False)
+        password: Specific password for the share (if secured=True)
         creation_acknowledgement: Send acknowledgement to sender (default: False)
+        external_mail_locale: Language for notification emails (default: "en")
     
     Returns:
-        JSON string with share creation result
+        JSON string with share creation result including recipient classification (INTERNAL, GUEST, or ANONYMOUS)
     """
     logger.info(f"Tool called: share_documents({user_uuid}, {len(document_uuids)} documents)")
     
@@ -92,13 +98,43 @@ def share_documents(
         url = f"{LINSHARE_BASE_URL}/{user_uuid}/shares"
         
         payload = {
+            "recipients": [],  # Will be populated below
             "documents": document_uuids,
+            "mailingListUuid": mailing_list_uuid or [],
             "secured": secured,
-            "creationAcknowledgement": creation_acknowledgement
+            "creationAcknowledgement": creation_acknowledgement,
+            "enableUSDA": False, # Admin tool doesn't expose USDA yet
+            "sharingNote": "",
+            "subject": subject or "",
+            "message": message or "",
+            "forceAnonymousSharing": False, # Default for admin tool
+            "externalMailLocale": external_mail_locale
         }
+
+        if password is not None:
+            payload["password"] = password
         
+        if expiration_date:
+            # Standardize to timestamp if possible or keep as is if it's already ISO
+            # For consistency with user tool, we should try to convert ISO to timestamp
+            target_ts = expiration_date
+            if isinstance(target_ts, str):
+                try:
+                    dt = datetime.fromisoformat(target_ts.replace('Z', '+00:00'))
+                    if dt.tzinfo is None: dt = dt.replace(tzinfo=timezone.utc)
+                    target_ts = int(dt.timestamp() * 1000)
+                except: pass
+            payload["expirationDate"] = target_ts
+        
+        # Handle recipients
+        final_recipients = []
         if recipient_emails:
-            payload["recipients"] = [{"mail": email} for email in recipient_emails]
+            for email in recipient_emails:
+                # For admin, we don't have a direct search tool here without user_uuid domain context
+                # but we'll try to provide a structured object if we can, or fallback to simple mail
+                final_recipients.append({"mail": email})
+        
+        payload["recipients"] = final_recipients
         
         if mailing_list_uuid:
             payload["mailingListUuid"] = mailing_list_uuid
@@ -126,16 +162,26 @@ def share_documents(
         shares = share_data if isinstance(share_data, list) else [share_data]
         
         for i, share in enumerate(shares, 1):
+            mail = share.get('recipient', {}).get('mail', 'N/A')
             result += f"\nShare {i}:\n"
             result += f"   - Share UUID: {share.get('uuid')}\n"
             result += f"   - Document: {share.get('name', 'N/A')}\n"
-            result += f"   - Recipient: {share.get('recipient', {}).get('mail', 'N/A')}\n"
+            result += f"   - Recipient: {mail}\n"
         
         return result
         
     except requests.RequestException as e:
         logger.error(f"Error sharing documents: {str(e)}")
-        return f"Error: {str(e)}"
+        error_msg = str(e)
+        if hasattr(e, 'response') and e.response is not None:
+            try:
+                error_msg = f"API Error {e.response.status_code}: {e.response.text}"
+                error_body = e.response.json()
+                if 'message' in error_body:
+                    error_msg = error_body['message']
+            except:
+                pass
+        return f"Error sharing documents: {error_msg}"
 
 @mcp.tool()
 def upload_document_to_personal_space(

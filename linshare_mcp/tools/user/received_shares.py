@@ -28,7 +28,7 @@ def user_list_my_received_shares() -> str:
             return "Error: Current user UUID not found. Please login."
         
         user_uuid = current_user['uuid']
-        url = f"{LINSHARE_USER_URL}/{user_uuid}/received_shares"
+        url = f"{LINSHARE_USER_URL}/received_shares"
         
         response = requests.get(
             url,
@@ -94,18 +94,33 @@ def user_copy_received_share_to_my_space(share_uuid: str) -> str:
             return "Error: Current user UUID not found. Please login."
         
         user_uuid = current_user['uuid']
-        url = f"{LINSHARE_USER_URL}/{user_uuid}/received_shares/{share_uuid}/copy"
+        # New endpoint for copying shares
+        url = f"{LINSHARE_USER_URL}/documents/copy"
+        
+        payload = {
+            "kind": "RECEIVED_SHARE",
+            "uuid": share_uuid
+        }
         
         response = requests.post(
             url,
             headers=auth_header,
+            json=payload,
             timeout=10
         )
         response.raise_for_status()
         
-        doc = response.json()
+        doc_data = response.json()
         
-        return f"✅ Share copied to your personal space!\n\nDocument: {doc.get('name')}\nUUID: {doc.get('uuid')}"
+        if isinstance(doc_data, list) and doc_data:
+            doc = doc_data[0]
+        else:
+            doc = doc_data
+            
+        name = doc.get('name', 'N/A') if isinstance(doc, dict) else 'N/A'
+        uuid = doc.get('uuid', 'N/A') if isinstance(doc, dict) else 'N/A'
+        
+        return f"✅ Share copied to your personal space!\n\nDocument: {name}\nUUID: {uuid}"
         
     except Exception as e:
         logger.error(f"Error copying share: {e}")

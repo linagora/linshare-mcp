@@ -12,6 +12,9 @@ from ...utils.auth import auth_manager
 def user_search_users(pattern: str) -> str:
     """Search for other users (e.g. for sharing).
     
+    Note: If a user is not found here, you can still share with their email 
+    using 'share_my_documents' - it will be treated as an anonymous share.
+
     Args:
         pattern: Search string (email, name)
     
