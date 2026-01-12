@@ -26,6 +26,12 @@ Use this mode when the MCP server is hosted **remotely** (e.g., in a Docker cont
 - **How it works**: Since the server cannot access the client's local disk, files are either fetched from a public URL or sent in base64-encoded chunks over the MCP protocol.
 - **Best for**: Web-based AI assistants or distributed setups.
 
+## 🤖 Chat Assistant
+
+This repository includes a **Chainlit-based Chat Client** that connects to the LinShare MCP server in User Mode. It provides a user-friendly chat interface for managing your files.
+
+👉 **[See Chat Client Documentation](linshare-chat-client/README.md)** for installation and usage instructions.
+
 ## 🔐 Authentication
 
 The server supports two modes of authentication, configured via environment variables.
@@ -64,6 +70,7 @@ These tools use the **User API** and require JWT authentication.
 | Tool | Description | Example Prompt |
 |------|-------------|----------------|
 | `list_my_documents` | List all files in your personal space. | "Show me my documents" |
+| `user_search_my_documents` | Search for a specific file by name. | "Find files named 'report'" |
 | `upload_file_from_local_directory` | Upload a file from the server's local directory (STDIN mode). | "Upload `report.pdf` to my documents" |
 | `user_remote_upload_from_url` | Upload a file to LinShare from a public URL (SSE/Remote mode). | "Fetch `https://.../logo.png` and save as `logo.png`" |
 | `user_remote_upload_by_chunks` | Send a local file in chunks (SSE/Remote mode). | "Upload the file I just provided in chunks" |
@@ -137,4 +144,16 @@ These tools use the **Admin API** and require Service Account authentication.
 3. **Run Server**:
    ```bash
    python -m linshare_mcp.main
+   ```
+
+4. **Mode Selection** (Optional):
+   ```bash
+   # User tools only (for chat assistants)
+   python -m linshare_mcp.main --mode user
+   
+   # Admin tools only (for admin dashboards)
+   python -m linshare_mcp.main --mode admin
+   
+   # All tools (default)
+   python -m linshare_mcp.main --mode all
    ```
