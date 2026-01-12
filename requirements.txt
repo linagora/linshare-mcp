@@ -1,0 +1,7 @@
+mcp
+fastmcp
+requests
+python-dotenv
+httpx
+uvicorn
+chainlit
