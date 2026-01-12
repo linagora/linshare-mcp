@@ -12,9 +12,13 @@ def user_search_audit(
     type: Literal["SHARE_ENTRY", "DOCUMENT_ENTRY", "GUEST", "WORK_SPACE", "WORK_SPACE_MEMBER", "WORK_GROUP", "WORKGROUP_MEMBER", "WORKGROUP_FOLDER", "WORKGROUP_DOCUMENT", "WORKGROUP_DOCUMENT_REVISION", "DOMAIN", "USER", "DOMAIN_PATTERN", "GROUP_FILTER", "WORKSPACE_FILTER", "FUNCTIONALITY", "CONTACTS_LISTS", "CONTACTS_LISTS_CONTACTS", "UPLOAD_REQUEST_GROUP", "UPLOAD_REQUEST", "UPLOAD_REQUEST_URL", "UPLOAD_REQUEST_ENTRY", "UPLOAD_PROPOSITION", "ANONYMOUS_SHARE_ENTRY", "AUTHENTICATION", "USER_PREFERENCE", "RESET_PASSWORD", "SAFE_DETAIL", "PUBLIC_KEY", "JWT_PERMANENT_TOKEN", "SHARED_SPACE_NODE", "MAIL_ATTACHMENT", "SHARED_SPACE_MEMBER", "DRIVE_MEMBER", "DRIVE", "WORKGROUP", "GUEST_MODERATOR"] | None = None,
     force_all: bool = False,
     begin_date: str | None = None,
-    end_date: str | None = None
+    end_date: str | None = None,
+    limit: int = 100,
+    offset: int = 0
 ) -> str:
     """[USER API] Search user audit logs (User v5).
+    
+    Arg 'begin_date' and 'end_date' are normalized to strict ISO 8601 (YYYY-MM-DDTHH:MM:SS.sssZ).
     
     🔐 Authentication: JWT token required
     🌐 API Endpoint: User v5 (/audit)
@@ -23,13 +27,12 @@ def user_search_audit(
         action: Filter by action
         type: Filter by resource type
         force_all: Force retrieval of all logs (default: False)
-        begin_date: Start date (ISO 8601: YYYY-MM-DDTHH:MM:SS.sssZ)
-        end_date: End date (ISO 8601: YYYY-MM-DDTHH:MM:SS.sssZ)
-        
-    Returns:
-        Formatted audit logs
+        begin_date: Start date (ISO 8601)
+        end_date: End date (ISO 8601)
+        limit: Max entries to return (default: 100)
+        offset: Offset for pagination (default: 0)
     """
-    logger.info(f"Tool called: user_search_audit(action={action}, type={type})")
+    logger.info(f"Tool called: user_search_audit(action={action}, type={type}, limit={limit})")
     
     if not LINSHARE_USER_URL:
         return "Error: LINSHARE_USER_URL not configured."
@@ -40,19 +43,61 @@ def user_search_audit(
             
         url = f"{LINSHARE_USER_URL}/audit"
         
+        # ✂️ Aggressive Date Normalization
+        from datetime import datetime, timezone
+        now_utc = datetime.now(timezone.utc)
+        today_str = now_utc.strftime("%Y-%m-%d")
+
+        def normalize_date_strict(d: str, end_of_day: bool = False) -> str | None:
+            if not d: return d
+            
+            logger.debug(f"Aggressively normalizing: {d}")
+            try:
+                # 1. Try to extract YYYY-MM-DD
+                import re
+                match = re.search(r"(\d{4}-\d{2}-\d{2})", d)
+                if match:
+                    base_date = match.group(1)
+                    # If it's today and we want end_of_day, omit to use server "now"
+                    if base_date == today_str and end_of_day:
+                        return None
+                        
+                    suffix = "T23:59:59.999Z" if end_of_day else "T00:00:00.000Z"
+                    return base_date + suffix
+                
+                # 2. Fallback: Parse anything else and re-emit strict
+                clean_d = d.replace('Z', '').replace(' ', 'T')
+                dt = datetime.fromisoformat(clean_d.split('+')[0].split('.')[0]) # Simplify
+                if dt.year < 1970: return d # Too old
+                
+                if dt > now_utc and end_of_day:
+                    return None
+                    
+                return dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+            except Exception as e:
+                logger.warning(f"Strict normalization failed for {d}: {e}")
+                return d # Return as is if we can't improve it
+
+        begin_date = normalize_date_strict(begin_date)
+        end_date = normalize_date_strict(end_date, end_of_day=True)
+        
         params = {
-            "forceAll": str(force_all).lower()
+            "forceAll": str(force_all).lower(),
+            "limit": limit,
+            "offset": offset
         }
         if action: params["action"] = action
         if type: params["type"] = type
         if begin_date: params["beginDate"] = begin_date
         if end_date: params["endDate"] = end_date
         
+        logger.info(f"Sending Audit Request: {url} with params {params}")
+        
         response = requests.get(
             url,
             params=params,
             headers=auth_manager.get_user_header(),
-            timeout=10
+            timeout=15
         )
         response.raise_for_status()
         

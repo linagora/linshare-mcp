@@ -58,7 +58,7 @@ def user_get_current_user_info() -> str:
     
     user_info = auth_manager.get_user_info()
     if not user_info:
-        return "Error: Token exists but user info is missing."
+        return "Error: Token exists but user info could not be fetched. This usually means the token is invalid or the LinShare URL is incorrect. Please run 'user_check_config' to diagnose."
         
     result = "Current User Session:\n\n"
     result += f"User: {user_info.get('firstName', '')} {user_info.get('lastName', '')}\n"
@@ -69,35 +69,72 @@ def user_get_current_user_info() -> str:
     return result
 @mcp.tool()
 def user_check_config() -> str:
-    """[COMMON] Check if the server has detected the necessary environment variables.
+    """[COMMON] Check the server configuration and test authentication.
     
-    This tool helps verify if the server is correctly configured (e.g., in Claude Desktop).
-    It checks for the presence of URLs and the JWT token without revealing secrets.
+    This tool verifies if the environment variables are set and performs a
+    live connectivity test to the LinShare authentication API.
     
     Returns:
-        A report of the current configuration status.
+        A detailed report of the configuration and connection status.
     """
     import os
+    import requests
     from ...config import LINSHARE_USER_URL, LINSHARE_ADMIN_URL, LINSHARE_JWT_TOKEN
     
-    results = ["LinShare Server Configuration Status:\n"]
+    auth_base = auth_manager._get_auth_base_url()
+    results = ["🔍 LinShare Configuration & Connection Check:\n"]
     
-    # Check URLs
     results.append(f"🌐 USER API URL: {'✅ SET' if LINSHARE_USER_URL else '❌ MISSING'}")
-    results.append(f"🌐 ADMIN API URL: {'✅ SET' if LINSHARE_ADMIN_URL else '❌ MISSING'}")
-    
-    # Check JWT Token
-    results.append(f"🔑 JWT Token: {'✅ DETECTED in environment' if LINSHARE_JWT_TOKEN else '❌ NOT FOUND (Login required)'}")
-    
-    # Check current session
+    if LINSHARE_USER_URL:
+         results.append(f"   - Raw: {LINSHARE_USER_URL}")
+         results.append(f"   - Auth Base (Normalized): {auth_base}")
+
+    if LINSHARE_JWT_TOKEN:
+        # Re-trigger fetch to ensure we have latest status
+        results.append("\n🔄 Refreshing user session...")
+        auth_manager._fetch_user_info()
+
     if auth_manager.is_logged_in():
-        results.append("🟢 Session Status: AUTHENTICATED")
+        results.append("\n🟢 Current Session: LOGGED IN")
         user = auth_manager.get_user_info()
         if user:
-            results.append(f"👤 Logged in as: {user.get('mail')} ({user.get('firstName')} {user.get('lastName')})")
+            results.append(f"   - User: {user.get('mail')} ({user.get('firstName')} {user.get('lastName')})")
+            results.append(f"   - UUID: {user.get('uuid')}")
+        else:
+            results.append("   ⚠️ Token is present but User Details are MISSING. (Fetch failed)")
     else:
-        results.append("🔴 Session Status: NOT AUTHENTICATED")
+        results.append("\n🔴 Current Session: NOT LOGGED IN")
+        
+    # PERFORM LIVE TEST
+    if LINSHARE_JWT_TOKEN:
+        results.append("\n⚡ Performing Connectivity Test...")
+        auth_base_norm = auth_manager._get_auth_base_url()
+        auth_base_orig = LINSHARE_USER_URL.rstrip('/') if LINSHARE_USER_URL else ""
+        
+        urls_to_test = [auth_base_norm]
+        if auth_base_orig and auth_base_orig != auth_base_norm:
+            urls_to_test.append(auth_base_orig)
+            
+        for test_base in urls_to_test:
+            if not test_base: continue
+            test_url = f"{test_base}/authentication/authorized"
+            results.append(f"📡 Testing: {test_url}")
+            try:
+                resp = requests.get(
+                    test_url,
+                    headers={'Authorization': f'Bearer {LINSHARE_JWT_TOKEN}', 'accept': 'application/json'},
+                    timeout=10
+                )
+                results.append(f"   🔢 Status: {resp.status_code}")
+                if resp.status_code == 200:
+                    results.append("   ✅ SUCCESS: This endpoint works!")
+                elif resp.status_code == 401:
+                    results.append("   ❌ FAILED: 401 Unauthorized (Invalid Token)")
+                elif resp.status_code == 404:
+                    results.append("   ❌ FAILED: 404 Not Found")
+                else:
+                    results.append(f"   ⚠️ Warning: Received status {resp.status_code}")
+            except Exception as e:
+                results.append(f"   ❌ Error: {str(e)}")
 
-    results.append("\nTip: If variables are missing, ensure you've updated your Claude Desktop config and fully RESTARTED the application.")
-    
     return "\n".join(results)

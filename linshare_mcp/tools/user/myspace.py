@@ -11,16 +11,23 @@ from datetime import datetime, timedelta, timezone
 from .myspace_helpers import _get_share_expiration_policy, _calculate_expiration_timestamp, _validate_expiration_range
 
 @mcp.tool()
-def list_my_documents() -> str:
-    """[USER API] List all documents in your personal space.
+def list_my_documents(
+    limit: int = 50,
+    offset: int = 0
+) -> str:
+    """[USER API] List documents in your personal space with pagination.
     
-    🔐 Authentication: JWT token required (use login_user or set LINSHARE_JWT_TOKEN)
+    🔐 Authentication: JWT token required
     🌐 API Endpoint: User v5 (/documents)
 
+    Args:
+        limit: Max documents to return (default: 50)
+        offset: Offset for pagination (default: 0)
+
     Returns:
-        Formatted list of all documents owned by the user
+        Formatted list of documents with total count metadata
     """
-    logger.info("Tool called: list_my_documents()")
+    logger.info(f"Tool called: list_my_documents(limit={limit}, offset={offset})")
 
     if not LINSHARE_USER_URL:
         return "Error: LINSHARE_USER_URL not configured."
@@ -44,10 +51,17 @@ def list_my_documents() -> str:
         if not documents:
             return "No documents found in your personal space."
 
-        # Format the response nicely
-        result = f"Personal Documents ({len(documents)} total):\n\n"
+        total_count = len(documents)
+        # Apply client-side pagination (API doesn't support it well on v5 /documents)
+        paged_docs = documents[offset : offset + limit]
 
-        for i, doc in enumerate(documents, 1):
+        # Format the response nicely
+        result = f"Personal Documents (Showing {len(paged_docs)} of {total_count} total):\n"
+        if offset + limit < total_count:
+            result += f"⚠️ NOTE: List is truncated. Use 'offset={offset + limit}' to see more.\n"
+        result += "\n"
+
+        for i, doc in enumerate(paged_docs, offset + 1):
             result += f"{i}. {doc.get('name', 'Unnamed')}\n"
             result += f"   - UUID: {doc.get('uuid')}\n"
             result += f"   - Size: {format_file_size(doc.get('size', 0))}\n"
@@ -63,6 +77,54 @@ def list_my_documents() -> str:
         return f"Error fetching documents: {str(e)}"
     except Exception as e:
         return f"Error: {str(e)}"
+
+@mcp.tool()
+def user_search_my_documents(pattern: str) -> str:
+    """[USER API] Search for documents in your personal space by name.
+    
+    Use this tool instead of 'list_my_documents' if looking for a specific file.
+    
+    🔐 Authentication: JWT token required
+    🌐 API Endpoint: User v5 (/documents)
+
+    Args:
+        pattern: Part of the filename to search for (case-insensitive)
+        
+    Returns:
+        Filtered list of matching documents
+    """
+    logger.info(f"Tool called: user_search_my_documents(pattern='{pattern}')")
+
+    if not LINSHARE_USER_URL:
+        return "Error: LINSHARE_USER_URL not configured."
+
+    try:
+        if not auth_manager.is_logged_in():
+            return "Error: User not logged in."
+
+        url = f"{LINSHARE_USER_URL}/documents"
+        response = requests.get(url, headers=auth_manager.get_user_header(), timeout=10)
+        response.raise_for_status()
+
+        documents = response.json()
+        pattern_lower = pattern.lower()
+        
+        matches = [d for d in documents if pattern_lower in d.get('name', '').lower()]
+
+        if not matches:
+            return f"No documents found matching '{pattern}' (out of {len(documents)} total files)."
+
+        result = f"Found {len(matches)} matches for '{pattern}':\n\n"
+        for i, doc in enumerate(matches, 1):
+            result += f"{i}. {doc.get('name')}\n"
+            result += f"   - UUID: {doc.get('uuid')}\n"
+            result += f"   - Size: {format_file_size(doc.get('size', 0))}\n\n"
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Error searching documents: {e}")
+        return f"Error searching documents: {str(e)}"
 
 @mcp.tool()
 def get_user_document_shares(document_uuid: str) -> str:
@@ -629,12 +691,22 @@ def _upload_file_to_linshare(
                         
                         break
         
+        # Try to find UUID if not captured in loop (e.g. if all chunks existed and were skipped)
+        if not upload_uuid:
+             # Check if file exists via GET request if all checks pass? 
+             # Or more likely, if we skipped POST, we might not get the JSON response with UUID.
+             # However, LinShare flow.js protocol usually returns success on last chunk POST.
+             # If all chunks were skipped, we might not have a post_response.
+             pass
+
         if not upload_uuid and 'post_response' in locals():
             rj = post_response.json()
             upload_uuid = rj.get('uuid') or rj.get('entry', {}).get('uuid')
 
         if not upload_uuid:
-            return f"Error: Upload finished but no UUID was returned by the server.{get_debug_log()}"
+             # Fallback: if loop finished but no UUID, maybe it was already fully uploaded?
+             # We can't easily know the UUID without searching by name, which is unreliable.
+             return f"Error: Upload finished but no UUID was returned by the server. Debug Log:\n{get_debug_log()}"
         
         # Step 4: Poll for upload status
         status_url = f"{LINSHARE_USER_URL}/flow/{upload_uuid}"
@@ -649,6 +721,7 @@ def _upload_file_to_linshare(
             if status == 'SUCCESS':
                 output = f"✅ File uploaded successfully!\n\n"
                 output += f"File: {filename}\n"
+                output += f"UUID: {upload_uuid}\n"
                 output += f"Size: {format_file_size(file_size)}\n"
                 output += f"Location: {'Workgroup' if workgroup_uuid else 'Personal space'}\n"
                 output += get_debug_log()

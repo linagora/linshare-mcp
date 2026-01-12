@@ -1,0 +1,11 @@
+
+chainlit
+mcp
+fastmcp
+httpx
+python-dotenv
+langchain
+langchain-google-genai
+google-generativeai
+langchain-openai
+langchain-groq
