@@ -582,6 +582,10 @@ def _upload_file_to_linshare(
         if payload: call_info += f"\nPayload/Params: {payload}"
         if response: call_info += f"\nResponse: {response[:1000]}" # Truncate large responses
         http_calls.append(call_info)
+        # Real-time logging
+        logger.info(f"📡 API: [{method}] {url} -> {status}")
+        if status >= 400:
+            logger.error(f"❌ API Error: {response[:500]}")
 
     def get_debug_log():
         return "\n\n--- DETAILED HTTP DEBUG LOG ---\n" + "\n\n".join(http_calls)
