@@ -34,6 +34,9 @@ MCP_SERVER_SSE_URL=http://127.0.0.1:8100/sse
 # LinShare API (These can also be configured via Settings UI)
 LINSHARE_USER_URL=https://your-instance.com/linshare/webservice/rest/user/v5
 LINSHARE_JWT_TOKEN=your_jwt_token
+
+> [!NOTE]
+> The chat client automatically includes an `Authorization` header in all requests to the MCP server. It uses **Bearer** auth (with your JWT) in User mode and **Basic** auth (with your credentials) in Admin mode.
 ```
 
 ## 🏃 Usage

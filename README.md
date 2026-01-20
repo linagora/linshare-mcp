@@ -20,10 +20,9 @@ Use this mode when the MCP server and the client (e.g., Claude Desktop) are runn
 - **How it works**: The server directly reads files from a local directory (configured via `LINSHARE_UPLOAD_DIR`).
 - **Best for**: Desktop usage where the AI has access to your local files.
 
-### 2. Remote (SSE) Mode
-Use this mode when the MCP server is hosted **remotely** (e.g., in a Docker container or a cloud server) and the client interacts via Server-Sent Events.
 - **Upload Tools**: `user_remote_upload_from_url` or `user_remote_upload_by_chunks`
 - **How it works**: Since the server cannot access the client's local disk, files are either fetched from a public URL or sent in base64-encoded chunks over the MCP protocol.
+- **Authentication**: Access to the `/sse` and `/messages` endpoints is protected by **Headers-based authentication** (see below).
 - **Best for**: Web-based AI assistants or distributed setups.
 
 ## 🤖 Chat Assistant
@@ -50,6 +49,19 @@ Used for administrative tools and delegation (acting on behalf of others).
     - `LINSHARE_ADMIN_URL`: The base URL for the Delegation API (e.g., `https://user.integration-linshare.org/linshare/webservice/rest/delegation/v2`)
     - `LINSHARE_USERNAME`: The service account email or username.
     - `LINSHARE_PASSWORD`: The service account password.
+
+---
+
+## 🔒 MCP Server Access Control (SSE)
+
+When running in **Remote (SSE) mode**, the MCP server itself requires authentication for every request (including tool calls). Access is enforced via the `Authorization` header:
+
+| Mode | Header Type | Credentials |
+| :--- | :--- | :--- |
+| **User Mode** | `Bearer` | `LINSHARE_JWT_TOKEN` |
+| **Admin Mode** | `Basic` | `LINSHARE_USERNAME` : `LINSHARE_PASSWORD` |
+
+The server uses a dedicated `AuthMiddleware` to validate these credentials before allowing access to the SSE stream or message exchange.
 
 ---
 
