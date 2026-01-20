@@ -264,14 +264,14 @@ async def connect_mcp(settings=None, silent=False):
              headers["Authorization"] = f"Bearer {manual_token.strip()}"
              print(f"🔑 Using Manual JWT for authentication.")
         
-        # Priority 2: OIDC Session Token
+        # Priority 2: Environment Variable
         else:
-            user = cl.user_session.get("user")
-            if user and hasattr(user, "metadata") and user.metadata:
-                token = user.metadata.get("access_token")
-                if token:
-                    headers["Authorization"] = f"Bearer {token}"
-                    print(f"🔑 Using User JWT (Bearer) for {user.identifier}")
+            token = os.getenv("LINSHARE_JWT_TOKEN")
+            if token:
+                headers["Authorization"] = f"Bearer {token}"
+                print(f"🔑 Using User JWT (Bearer) from environment.")
+            else:
+                print("⚠️ No LinShare JWT provided (Manual or Env). Tools may fail.")
     else:
         # Basic Auth
         user_name = settings.get("admin_username")

@@ -17,9 +17,9 @@ You can configure the Chat Assistant dynamically without restarting the server:
 1. **Open Settings**: Click the gear icon (**⚙️**) in the bottom-left of the chat window.
 2. **MCP Connection**: Update the `MCP Server SSE URL` (e.g., `http://localhost:8000/sse`).
 3. **Authentication Mode**:
-    - **User Mode**: Toggle "Admin Mode" **OFF**. You can provide a manual JWT or rely on OIDC.
+    - **User Mode**: Toggle "Admin Mode" **OFF**. Enter your LinShare JWT in the Manual JWT field or use the `LINSHARE_JWT_TOKEN` environment variable.
     - **Admin Mode**: Toggle "Admin Mode" **ON**. Enter your service account username and password.
-4. **JWT Override**: If not using OIDC, toggle "Manual JWT" **ON** and paste your token.
+4. **Manual JWT**: Toggle "Manual JWT" **ON** and paste your LinShare JWT token to authenticate User Mode tools. This is independent of the OIDC login used for the chat assistant itself.
 5. **Persistence**: Your settings are saved per-user in `user_configs.json` and persist between sessions.
 
 ## 📦 Installation
