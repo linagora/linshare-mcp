@@ -15,6 +15,7 @@ server_sse_draft.py
 test_remote_upload_sizes.py
 audit_results.txt
 find_recent_workgroups.py
+run_server.py
 linshare-chat-client/debug_audio_dump.*
 linshare-chat-client/user_configs.json
 linshare_mcp.egg-info/
