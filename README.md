@@ -140,7 +140,7 @@ These tools use the **Admin API** and require Service Account authentication.
 
 ## 📦 Installation & Configuration
 
-1. **Install Dependencies**:
+1. **Install Dependencies** (from the project root):
    ```bash
    pip install -r requirements.txt
    ```
@@ -154,7 +154,7 @@ These tools use the **Admin API** and require Service Account authentication.
     LINSHARE_UPLOAD_DIR=/tmp/uploads # Optional: directory for file reassembly
     ```
 
-3. **Run Server**:
+3. **Run Server** (from the project root):
    ```bash
    # Using uv (recommended)
    uv run python -m linshare_mcp.main

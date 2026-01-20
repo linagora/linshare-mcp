@@ -64,14 +64,16 @@ When OIDC is enabled, users must log in via the identity provider to access the 
 
 ## 🏃 Usage
 
-1. **Start the MCP Server** (in a separate terminal):
+1. **Start the MCP Server** (Open a new terminal at the **project root**):
    ```bash
    python -m linshare_mcp.main --transport sse --port 8100
    ```
 
-2. **Start the Chat Client**:
+2. **Start the Chat Client** (In the **`linshare-chat-client/`** directory):
    ```bash
-   ./venv/bin/chainlit run chat_client.py -w
+   # Activate venv first
+   source venv/bin/activate
+   chainlit run chat_client.py -w
    ```
 
 3. Open http://localhost:8000 in your browser.
