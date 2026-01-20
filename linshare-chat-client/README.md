@@ -37,6 +37,17 @@ LINSHARE_JWT_TOKEN=your_jwt_token
 
 > [!NOTE]
 > The chat client automatically includes an `Authorization` header in all requests to the MCP server. It uses **Bearer** auth (with your JWT) in User mode and **Basic** auth (with your credentials) in Admin mode.
+
+### 🔑 Authentication (OIDC)
+
+The chat assistant supports native OpenID Connect (OIDC) login via Chainlit.
+
+1. **Enable OIDC**: Set `AUTH_TYPE=oidc` in `.env`.
+2. **Configure Provider**: Provide your `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, and `OIDC_CONFIG_URL` (Discovery URL).
+3. **Set Redirect URL**: Ensure your OIDC provider allows `http://localhost:8001/auth/oauth/LinShare/callback`.
+4. **Session Security**: Generate a random `CHAINLIT_AUTH_SECRET` (e.g., `openssl rand -hex 32`).
+
+When OIDC is enabled, the client will automatically exchange the provider's token for a LinShare JWT and use it for all MCP tool calls.
 ```
 
 ## 🏃 Usage
