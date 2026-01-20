@@ -138,3 +138,39 @@ def user_check_config() -> str:
                 results.append(f"   ❌ Error: {str(e)}")
 
     return "\n".join(results)
+@mcp.tool()
+def user_oidc_setup(oidc_token: str, id_token: str, cookie_string: str) -> str:
+    """[USER API] Bootstrap authentication using OIDC tokens from a browser session.
+    
+    This tool allows you to authenticate the MCP server using an existing
+    LinShare session from your browser.
+    
+    🔐 Authentication: Existing OIDC tokens and cookies required
+    🌐 API Endpoint: User v5 (/authentication/authorized and /jwt)
+    
+    Args:
+        oidc_token: The 'access_token' value.
+        id_token: The 'id_token' value.
+        cookie_string: The full cookie string (e.g., 'JSESSIONID=...; _ga=...').
+        
+    Returns:
+        Confirmation of successful bootstrap and instructions for persistence.
+    """
+    logger.info("Tool called: user_oidc_setup()")
+    
+    try:
+        res = auth_manager.provision_oidc_token(oidc_token, id_token, cookie_string)
+        user = res['user']
+        token = res['token']
+        
+        result = f"✅ OIDC Bootstrap Successful!\n\n"
+        result += f"User: {user.get('firstName')} {user.get('lastName')} ({user.get('mail')})\n"
+        result += f"New JWT Provisioned: {token[:10]}...{token[-10:]}\n\n"
+        result += "💡 To make this permanent, set the following environment variable:\n"
+        result += f"LINSHARE_JWT_TOKEN={token}\n"
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"OIDC bootstrap failed: {e}")
+        return f"❌ OIDC Bootstrap Failed: {str(e)}"

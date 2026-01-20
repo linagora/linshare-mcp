@@ -34,6 +34,56 @@ class AuthManager:
         url = re.sub(r'/v\d+$', '', url)
         return url
 
+    def provision_oidc_token(self, oidc_token: str, id_token: str, cookie_string: str) -> Dict[str, Any]:
+        """Validate OIDC session and provision a permanent JWT.
+        
+        This is a bootstrap method that uses existing browser session data
+        to authenticate a headless client with LinShare.
+        """
+        auth_base = self._get_auth_base_url()
+        headers = {
+            'Authorization': f'Bearer {oidc_token}',
+            'accept': 'application/json',
+            'Cookie': cookie_string
+        }
+        
+        # 1. Validate the session
+        authorized_url = f"{auth_base}/authentication/authorized"
+        logger.info(f"Validating OIDC session at {authorized_url}")
+        resp = requests.get(authorized_url, headers=headers, timeout=10)
+        resp.raise_for_status()
+        self.user_info = resp.json()
+        
+        # 2. Check for existing MCP JWT or create a new one
+        # We try to find a token with a specific description if possible, or just creating a new one
+        jwt_url = f"{auth_base}/jwt"
+        logger.info(f"Fetching/Creating JWT at {jwt_url}")
+        
+        # Check existing
+        jwt_resp = requests.get(jwt_url, headers=headers, timeout=10)
+        tokens = jwt_resp.json() if jwt_resp.status_code == 200 else []
+        
+        mcp_token = next((t for t in tokens if t.get('description') == "MCP-Server-Token"), None)
+        
+        if not mcp_token:
+            logger.info("No MCP-Server-Token found. Creating a new one.")
+            create_resp = requests.post(
+                jwt_url, 
+                headers=headers,
+                json={"description": "MCP-Server-Token", "expiryDate": None}, # Permanent
+                timeout=10
+            )
+            create_resp.raise_for_status()
+            mcp_token = create_resp.json()
+            
+        self.token = mcp_token.get('token')
+        logger.info(f"OIDC bootstrap success. New JWT provisioned for {self.user_info.get('mail')}")
+        
+        return {
+            "user": self.user_info,
+            "token": self.token
+        }
+
     def login(self, username, password) -> Dict[str, Any]:
         """Authenticate with LinShare and store the JWT token."""
         auth_base_norm = self._get_auth_base_url()

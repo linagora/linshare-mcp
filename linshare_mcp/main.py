@@ -24,6 +24,48 @@ MODE = _args.mode or get_mode()
 
 from .app import mcp
 
+# --- Authentication Middleware ---
+import base64
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
+
+class AuthMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        # We only protect SSE related endpoints
+        if request.url.path in ["/sse", "/messages"]:
+            auth_header = request.headers.get("Authorization")
+            
+            if not auth_header:
+                print(f"🔒 Auth Failed: Missing Authorization header for {request.url.path}")
+                return Response("Unauthorized: Missing Authorization header", status_code=401)
+            
+            # 1. Check for Admin Basic Auth
+            if MODE in ["admin", "all"] and auth_header.startswith("Basic "):
+                try:
+                    encoded = auth_header.split(" ")[1]
+                    decoded = base64.b64decode(encoded).decode("utf-8")
+                    user, password = decoded.split(":")
+                    
+                    from .config import LINSHARE_USERNAME, LINSHARE_PASSWORD
+                    if user == LINSHARE_USERNAME and password == LINSHARE_PASSWORD:
+                        return await call_next(request)
+                except Exception as e:
+                    print(f"🔒 Admin Auth Error: {e}")
+
+            # 2. Check for User JWT (Bearer)
+            if MODE in ["user", "all"] and auth_header.startswith("Bearer "):
+                # For now, we just check if it looks like a JWT (3 parts)
+                token = auth_header.split(" ")[1]
+                if len(token.split(".")) == 3:
+                     return await call_next(request)
+                else:
+                    print("🔒 User Auth Failed: Invalid JWT format")
+
+            print(f"🔒 Auth Failed: Invalid credentials for mode {MODE.upper()}")
+            return Response(f"Unauthorized: Invalid credentials for mode {MODE}", status_code=401)
+            
+        return await call_next(request)
+
 # Conditionally import tool modules based on mode
 from .tools import files as common_files
 from .resources import files as resource_files
@@ -59,7 +101,9 @@ def main():
         print(f"🔌 Listening on http://{args.host}:{args.port} (SSE)")
         import uvicorn
         # FastMCP creates an ASGI app for SSE transport
-        uvicorn.run(mcp.sse_app(), host=args.host, port=args.port)
+        app = mcp.sse_app()
+        app.add_middleware(AuthMiddleware)
+        uvicorn.run(app, host=args.host, port=args.port)
     else:
         print(f"🔌 Running in STDIO mode")
         mcp.run(transport='stdio')

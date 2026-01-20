@@ -44,11 +44,12 @@ Used for tools that act as the logged-in user (Personal Space, My Shares, etc.).
 
 If `LINSHARE_JWT_TOKEN` is not set, you can use the `user_login_user` tool to authenticate dynamically.
 
-### 2. Admin Authentication (Service Account)
+### 2. Admin Authentication (Basic Auth)
 Used for administrative tools and delegation (acting on behalf of others).
 - **Environment Variables**:
-    - `LINSHARE_ADMIN_URL`: The base URL for the Admin API (e.g., `https://admin.linshare.org/linshare/webservice/rest/service`)
-    - `LINSHARE_BASIC_AUTH_TOKEN`: The Base64 encoded `username:password` for the service account.
+    - `LINSHARE_ADMIN_URL`: The base URL for the Delegation API (e.g., `https://user.integration-linshare.org/linshare/webservice/rest/delegation/v2`)
+    - `LINSHARE_USERNAME`: The service account email or username.
+    - `LINSHARE_PASSWORD`: The service account password.
 
 ---
 
@@ -143,10 +144,15 @@ These tools use the **Admin API** and require Service Account authentication.
 
 3. **Run Server**:
    ```bash
+   # Using uv (recommended)
+   uv run python -m linshare_mcp.main
+   
+   # Or standard python
    python -m linshare_mcp.main
    ```
 
 4. **Mode Selection** (Optional):
+   The server can load only a subset of tools to simplify the UI for the AI:
    ```bash
    # User tools only (for chat assistants)
    python -m linshare_mcp.main --mode user
@@ -157,3 +163,30 @@ These tools use the **Admin API** and require Service Account authentication.
    # All tools (default)
    python -m linshare_mcp.main --mode all
    ```
+
+## 🧪 Testing
+
+A comprehensive test suite is included to verify all components of the MCP server.
+
+### Prerequisites
+Install test dependencies:
+```bash
+pip install pytest pytest-asyncio pytest-cov httpx
+# OR
+uv pip install pytest pytest-asyncio pytest-cov httpx
+```
+
+### Running Tests
+```bash
+# Run all tests (Unit, Middleware, Integration, E2E)
+uv run pytest tests/ -v
+
+# Run only unit tests
+uv run pytest tests/unit/ -v
+
+# Check Code Coverage
+uv run pytest --cov=linshare_mcp --cov-report=term-missing
+```
+
+> [!NOTE]
+> **Integration Tests** require a live LinShare instance. Ensure `LINSHARE_USER_URL`, `LINSHARE_ADMIN_URL`, and relevant credentials are set in your `.env` file before running them.

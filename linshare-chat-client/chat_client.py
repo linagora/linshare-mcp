@@ -1,7 +1,69 @@
-
 # chat_client.py
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# 1. Load environment variables before ANY other imports
+env_path = Path(__file__).parent / ".env"
+load_dotenv(dotenv_path=env_path, override=True)
+
+# 2. DEBUG: Check and Force OIDC variables for Chainlit auto-discovery
+AUTH_TYPE = os.getenv("AUTH_TYPE", "none").lower()
+print(f"🔍 Environment Check (Auth Type: {AUTH_TYPE})")
+
+if AUTH_TYPE == "oidc":
+    print("🛠️  Auto-configuring OIDC via Generic OAuth...")
+    discovery_url = os.getenv("OIDC_CONFIG_URL") or os.getenv("OIDC_DISCOVERY_URL")
+    client_id = os.getenv("OIDC_CLIENT_ID")
+    client_secret = os.getenv("OIDC_CLIENT_SECRET")
+    
+    if discovery_url and client_id and client_secret:
+        try:
+            import httpx
+            # Sync fetch of discovery info
+            with httpx.Client() as client:
+                resp = client.get(discovery_url)
+                resp.raise_for_status()
+                disco = resp.json()
+                
+                # Map OIDC Discovery to Chainlit Generic OAuth variables
+                os.environ["OAUTH_GENERIC_CLIENT_ID"] = client_id
+                os.environ["OAUTH_GENERIC_CLIENT_SECRET"] = client_secret
+                os.environ["OAUTH_GENERIC_AUTH_URL"] = disco.get("authorization_endpoint")
+                os.environ["OAUTH_GENERIC_TOKEN_URL"] = disco.get("token_endpoint")
+                os.environ["OAUTH_GENERIC_USER_INFO_URL"] = disco.get("userinfo_endpoint")
+                os.environ["OAUTH_GENERIC_SCOPES"] = "openid profile email"
+                os.environ["OAUTH_GENERIC_NAME"] = "LinShare"
+                
+                # CRITICAL: Manually patch the existing provider instance in Chainlit
+                try:
+                    import chainlit.oauth_providers as oauth
+                    print(f"DEBUG: Found {len(oauth.providers)} configured providers.")
+                    for p in oauth.providers:
+                        class_name = p.__class__.__name__
+                        print(f"DEBUG: Checking provider: {p.id} ({class_name})")
+                        if class_name == "GenericOAuthProvider":
+                            p.id = "LinShare"
+                            p.client_id = client_id
+                            p.client_secret = client_secret
+                            p.authorize_url = disco.get("authorization_endpoint")
+                            p.token_url = disco.get("token_endpoint")
+                            p.user_info_url = disco.get("userinfo_endpoint")
+                            p.scopes = "openid profile email"
+                            # Important: Chainlit uses authorize_params to build the URL
+                            p.authorize_params["scope"] = "openid profile email"
+                            print("✅ GenericOAuthProvider instance manually patched (Scope & ID fixed).")
+                except Exception as patch_err:
+                    print(f"⚠️ Could not patch provider instance: {patch_err}")
+                
+                print(f"✅ Generic OAuth configured using OIDC discovery.")
+        except Exception as e:
+            print(f"❌ Failed to parse OIDC discovery: {e}")
+
+# Chainlit will now find the 'generic' provider we just patched.
 import chainlit as cl
 from mcp import ClientSession
+# ... existing imports ...
 from mcp.client.sse import sse_client
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
@@ -9,17 +71,53 @@ from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain_core.tools import tool
 import httpx
-import os
-from pathlib import Path
 import base64
 import json
-from dotenv import load_dotenv
 
-# Load API Keys relative to script
-env_path = Path(__file__).parent / ".env"
-load_dotenv(dotenv_path=env_path, override=True)
+# --- User Config Persistence ---
+USER_CONFIGS_FILE = Path(__file__).parent / "user_configs.json"
+
+def load_user_config(user_id):
+    """Load persistent settings for a specific user."""
+    if not USER_CONFIGS_FILE.exists():
+        return {}
+    try:
+        with open(USER_CONFIGS_FILE, "r") as f:
+            data = json.load(f)
+            return data.get(user_id, {})
+    except Exception as e:
+        print(f"⚠️ Error loading user config: {e}")
+        return {}
+
+def save_user_config(user_id, config_data):
+    """Save settings for a specific user."""
+    try:
+        all_configs = {}
+        if USER_CONFIGS_FILE.exists():
+            with open(USER_CONFIGS_FILE, "r") as f:
+                all_configs = json.load(f)
+        
+        all_configs[user_id] = config_data
+        with open(USER_CONFIGS_FILE, "w") as f:
+            json.dump(all_configs, f, indent=4)
+        print(f"✅ Configuration saved for user: {user_id}")
+    except Exception as e:
+        print(f"❌ Error saving user config: {e}")
+
+# --- Authentication Callbacks ---
+if AUTH_TYPE == "oidc":
+    try:
+        @cl.oauth_callback
+        def oauth_callback(provider_id, token, raw_user_data, default_user):
+            """Capture OIDC tokens after successful login."""
+            # Store metadata in user object for on_chat_start
+            return default_user
+        print("✅ OIDC OAuth Callback registered.")
+    except Exception as e:
+        print(f"❌ FAILED to register OIDC callback: {e}")
 
 MCP_SERVER_SSE_URL = os.getenv("MCP_SERVER_SSE_URL", "http://127.0.0.1:8100/sse")
+
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -36,8 +134,186 @@ LLM_PROVIDER = os.getenv("LLM_PROVIDER", "google").lower()
 TRANSCRIPTION_PROVIDER = os.getenv("TRANSCRIPTION_PROVIDER", "groq").lower()
 
 print(f"📡 Configuration Loaded:")
+
+def get_settings(user_id=None, current_auth_mode=None):
+    # Load current settings to use as initial values in the UI
+    config = load_user_config(user_id) if user_id else {}
+    
+    # Defaults
+    # Defaults
+    # Defaults via Environment or Empty
+    mcp_url = config.get("mcp_url") or os.getenv("MCP_SERVER_SSE_URL", "")
+    
+    # Handle legacy config (string) vs new config (bool)
+    stored_mode = config.get("mcp_auth_mode")
+    
+    if isinstance(stored_mode, bool):
+        is_admin_mode = stored_mode
+    elif isinstance(stored_mode, str) and "Basic" in stored_mode:
+        is_admin_mode = True
+    else:
+        is_admin_mode = False
+        
+    # Handle Manual JWT Switch
+    is_manual_jwt = config.get("use_manual_jwt", False) # Default to False (use OIDC)
+
+    # Override if passed explicitly (during update) - Not really needed for static UI but good for safety
+    if current_auth_mode is not None:
+        is_admin_mode = current_auth_mode
+
+    widgets = [
+        cl.input_widget.TextInput(
+            id="mcp_url",
+            label="MCP Server SSE URL",
+            initial=mcp_url,
+        ),
+        cl.input_widget.Switch(
+            id="mcp_auth_mode",
+            label="Enable Admin Mode (Basic Auth)",
+            initial=is_admin_mode
+        ),
+        cl.input_widget.TextInput(
+            id="admin_username",
+            label="Admin Username (for Basic Auth)",
+            initial=config.get("admin_username") or ""
+        ),
+        cl.input_widget.TextInput(
+            id="admin_password",
+            label="Admin Password (for Basic Auth)",
+            initial=config.get("admin_password") or ""
+        ),
+        cl.input_widget.Switch(
+            id="use_manual_jwt",
+            label="Enable Manual JWT Override",
+            initial=is_manual_jwt
+        ),
+        cl.input_widget.TextInput(
+            id="manual_jwt",
+            label="Manual JWT Token",
+            initial=config.get("manual_jwt") or ""
+        )
+    ]
+    
+    # NOTE: All widgets are returned unconditionally to ensure instant usability 
+    # without requiring the "Close -> Re-open" workflow.
+    
+    return widgets
+
+@cl.on_settings_update
+async def on_settings_update(settings):
+    """Handle changes to the configuration UI."""
+    user = cl.user_session.get("user")
+    user_id = user.identifier if user else "public_user"
+    
+    # Save to disk
+    save_user_config(user_id, settings)
+    
+    # Notify and reconnect automatically
+    await cl.Message(content="⚙️ Settings saved! Reconnecting...").send()
+    await connect_mcp(settings)
+
+async def connect_mcp(settings=None, silent=False):
+    """Worker to handle MCP connection with specific settings and headers."""
+    # 1. Close existing session if any
+    old_mcp_session = cl.user_session.get("mcp_session")
+    if old_mcp_session:
+        try:
+             # Just safety cleanup
+             cl.user_session.set("mcp_session", None)
+             print("🔄 Previous MCP session cleared.")
+        except: pass
+
+    old_sse = cl.user_session.get("sse_ctx")
+    if old_sse:
+        try:
+             await old_sse.__aexit__(None, None, None)
+             print("🔄 Previous MCP SSE connection closed.")
+        except: pass
+
+    # 2. Get settings (from UI or fallback)
+    if not settings:
+        user = cl.user_session.get("user")
+        user_id = user.identifier if user else "public_user"
+        settings = load_user_config(user_id)
+    
+    sse_url = settings.get("mcp_url") or os.getenv("MCP_SERVER_SSE_URL", "")
+    
+    if not sse_url:
+        print("⚠️ No MCP URL configured. Skipping connection.")
+        if not silent:
+             await cl.Message(content="⚠️ Please configure the MCP Server URL in settings.").send()
+        return
+    
+    # Handle Auth Mode Switches
+    auth_mode_val = settings.get("mcp_auth_mode")
+    if isinstance(auth_mode_val, bool):
+        is_admin = auth_mode_val
+    elif isinstance(auth_mode_val, str) and "Basic" in auth_mode_val:
+        is_admin = True
+    else:
+        is_admin = False
+        
+    use_manual_jwt = settings.get("use_manual_jwt", False)
+    
+    # 3. Build headers
+    headers = {}
+    if not is_admin:
+        # Priority 1: User Manual JWT (if switch enabled)
+        manual_token = settings.get("manual_jwt")
+        if use_manual_jwt and manual_token and manual_token.strip():
+             headers["Authorization"] = f"Bearer {manual_token.strip()}"
+             print(f"🔑 Using Manual JWT for authentication.")
+        
+        # Priority 2: OIDC Session Token
+        else:
+            user = cl.user_session.get("user")
+            if user and hasattr(user, "metadata") and user.metadata:
+                token = user.metadata.get("access_token")
+                if token:
+                    headers["Authorization"] = f"Bearer {token}"
+                    print(f"🔑 Using User JWT (Bearer) for {user.identifier}")
+    else:
+        # Basic Auth
+        user_name = settings.get("admin_username")
+        password = settings.get("admin_password")
+        if user_name and password:
+            auth_str = f"{user_name}:{password}"
+            encoded = base64.b64encode(auth_str.encode("utf-8")).decode("utf-8")
+            headers["Authorization"] = f"Basic {encoded}"
+            print(f"🔑 Using Admin Basic Auth for {user_name}")
+
+    print(f"🔄 Connecting to SSE Server at: {sse_url}")
+    try:
+        # Keep connection open manually
+        sse_ctx = sse_client(sse_url, headers=headers)
+        streams = await sse_ctx.__aenter__()
+        
+        session_ctx = ClientSession(streams[0], streams[1])
+        session = await session_ctx.__aenter__()
+        await session.initialize()
+        
+        # Store contexts
+        cl.user_session.set("session_ctx", session_ctx)
+        cl.user_session.set("sse_ctx", sse_ctx)
+        cl.user_session.set("mcp_session", session)
+
+        # 4. Fetch available tools from MCP Server
+        result = await session.list_tools()
+        mcp_tools = result.tools
+        cl.user_session.set("tools_map", {t.name: t for t in mcp_tools})
+        print(f"✅ Connected! {len(mcp_tools)} tools loaded.")
+        
+        return mcp_tools
+
+    except Exception as e:
+        print(f"❌ Connection Failed: {e}")
+        if not silent:
+            await cl.Message(content=f"❌ Connection Failed to {sse_url}: {e}").send()
+        return None
 print(f"   LLM Provider: {LLM_PROVIDER}")
 print(f"   Transcription Provider: {TRANSCRIPTION_PROVIDER}")
+print(f"   Auth Type: {AUTH_TYPE}")
+
 if LLM_PROVIDER == "local":
     print(f"   Local URL: {LOCAL_LLM_URL}")
     print(f"   Local Model: {LOCAL_LLM_MODEL}")
@@ -66,7 +342,7 @@ def get_llm():
         )
     else:
         # Default to Google Gemini (Ensure 1.5-flash is used, 2.5 does not exist)
-        return ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=GOOGLE_API_KEY)
+        return ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=GOOGLE_API_KEY)
 
 @cl.on_audio_start
 async def on_audio_start():
@@ -203,73 +479,77 @@ async def on_audio_end(*args, **kwargs):
 
 @cl.on_chat_start
 async def on_chat_start():
-    print(f"🔄 Connecting to SSE Server at: {MCP_SERVER_SSE_URL}")
-    try:
-        # Keep connection open manually
-        sse_ctx = sse_client(MCP_SERVER_SSE_URL)
-        streams = await sse_ctx.__aenter__()
-        
-        session_ctx = ClientSession(streams[0], streams[1])
-        session = await session_ctx.__aenter__()
-        await session.initialize()
-        
-        # Store contexts
-        cl.user_session.set("session_ctx", session_ctx)
-        cl.user_session.set("sse_ctx", sse_ctx)
-        cl.user_session.set("mcp_session", session)
+    user = cl.user_session.get("user")
+    user_id = user.identifier if user else "public_user"
+    
+    # 1. Initialize UI Settings
+    settings = load_user_config(user_id)
+    # Update initial values in widgets based on stored config
+    await cl.ChatSettings(get_settings(user_id)).send()
+    
+    # 2. Connect to MCP Server (using stored or default settings)
+    # Be silent on boot if no config exists to avoid scaring users with auth errors
+    is_initial_run = not bool(settings)
+    mcp_tools = await connect_mcp(settings, silent=is_initial_run)
+    if not mcp_tools:
+        # Fallback empty list to avoid crashes
+        mcp_tools = []
 
-        # 1. Fetch available tools from MCP Server
-        result = await session.list_tools()
-        mcp_tools = result.tools
-        
-        # 2. Convert MCP tools to LangChain compatible tools
-        langchain_tools = []
-        for t in mcp_tools:
-            # We create a dynamic wrapper for each tool
-            async def dynamic_tool_func(*args, **kwargs):
-                # This function is bound to the specific tool name
-                tool_name = kwargs.pop('__tool_name')
-                print(f"🛠️ Agent calling tool: {tool_name} with {kwargs}")
-                res = await session.call_tool(tool_name, arguments=kwargs)
-                return res.content[0].text
+    # 3. Build tool descriptions for the system prompt
+    tool_descriptions = "\n".join([f"- {t.name}: {t.description} (Args: {t.inputSchema})" for t in mcp_tools])
+    
+    from datetime import datetime
+    now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+    
+    # --- NEW: User Context Injection ---
+    user_context = ""
+    # Default un-connected message
+    welcome_msg = "👋 Welcome to LinShare Assistant. Please open settings ⚙️ to configure the MCP connection."
+    
+    # Only show "Connected" if we actually have tools or an active session
+    session = cl.user_session.get("mcp_session")
+    
+    # Check for Admin Mode
+    auth_mode_val = settings.get("mcp_auth_mode")
+    is_admin_mode = False
+    if isinstance(auth_mode_val, bool):
+        is_admin_mode = auth_mode_val
+    elif isinstance(auth_mode_val, str) and "Basic" in auth_mode_val:
+        is_admin_mode = True
 
-            # Create the structured tool definition
-            # We need to construct the schema from t.inputSchema
-            # For simplicity in this demo, we rely on the LLM to infer args or use a generic binding
-            # A more robust implementation would convert JSON schema to Pydantic
-            pass 
-            
-        # SIMPLE APPROACH:
-        # We will use the 'bind_tools' capability of the model if we can convert the schema.
-        # But converting dynamic JSON schema to LangChain tools on the fly is tricky.
-        # INSTEAD: We will just give the LLM the raw tool definitions in the system prompt
-        # and ask it to output JSON for tool calls.
-        tool_descriptions = "\n".join([f"- {t.name}: {t.description} (Args: {t.inputSchema})" for t in mcp_tools])
-        
-        from datetime import datetime
-        now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-        
-        # --- NEW: User Context Injection ---
-        welcome_msg = f"✅ Connected! I have access to {len(mcp_tools)} LinShare tools. Ask me anything!"
-        user_context = ""
-        try:
-            user_info_raw = await session.call_tool("user_get_current_user_info", {})
-            user_info_text = user_info_raw.content[0].text if user_info_raw.content else ""
-            print(f"🔍 User info response: {user_info_text[:200]}")
-            if "Current User Session" in user_info_text:
-                user_context = f"\n\nCURRENT USER INFO:\n{user_info_text}"
-                # Extract first name if possible
-                import re
-                match = re.search(r"User: (\w+)", user_info_text)
-                if match:
-                    welcome_msg = f"🛡️ **LinShare Assistant** | Hello {match.group(1)}! I'm ready to help you manage your files securely."
-                    print(f"✅ Personalized welcome message created for: {match.group(1)}")
-            else:
-                print(f"⚠️ User info doesn't contain 'Current User Session'. Response: {user_info_text}")
-        except Exception as e:
-            print(f"❌ Error fetching user info: {e}")
+    if session and mcp_tools:
+        if is_admin_mode:
+            # Admin Context
+            welcome_msg = f"🛡️ **Connected as Administrator!** | I have access to {len(mcp_tools)} Admin tools. I can audit users, manage workgroups, and more."
+            user_context = (
+                "\n\n### AUTHENTICATION STATUS: ADMINISTRATOR 🛡️\n"
+                "You are currently logged in as a SYSTEM ADMINISTRATOR.\n"
+                "You have ELEVATED PRIVILEGES to manage users, workgroups, and view audit logs.\n"
+                "Do NOT refuse requests to list activities or manage resources on behalf of other users.\n"
+                "Use 'admin_*' tools for these tasks."
+            )
+            print(f"✅ Admin Mode Detected. Context injected.")
+        else:
+            # Regular User Context
+            welcome_msg = f"✅ Connected! I have access to {len(mcp_tools)} LinShare tools. Ask me anything!"
+            try:
+                user_info_raw = await session.call_tool("user_get_current_user_info", {})
+                user_info_text = user_info_raw.content[0].text if user_info_raw.content else ""
+                print(f"🔍 User info response: {user_info_text[:200]}")
+                if "Current User Session" in user_info_text:
+                    user_context = f"\n\nCURRENT USER INFO:\n{user_info_text}"
+                    # Extract first name if possible
+                    import re
+                    match = re.search(r"User: (\w+)", user_info_text)
+                    if match:
+                        welcome_msg = f"🛡️ **LinShare Assistant** | Hello {match.group(1)}! I'm ready to help you manage your files securely."
+                        print(f"✅ Personalized welcome message created for: {match.group(1)}")
+                else:
+                    print(f"⚠️ User info doesn't contain 'Current User Session'. Response: {user_info_text}")
+            except Exception as e:
+                print(f"❌ Error fetching user info: {e}")
 
-        system_prompt = f"""You are the LinShare Assistant. You have access to these tools:
+    system_prompt = f"""You are the LinShare Assistant. You have access to these tools:
 {tool_descriptions}
 
 Current Date: {now}{user_context}
@@ -299,14 +579,10 @@ To use a tool, reply in JSON format:
 
 Context: User is managing their files on LinShare.
 """
-        cl.user_session.set("system_prompt", system_prompt)
-        cl.user_session.set("tools_map", {t.name: t for t in mcp_tools})
-        cl.user_session.set("message_history", [SystemMessage(content=system_prompt)])
+    cl.user_session.set("system_prompt", system_prompt)
+    cl.user_session.set("message_history", [SystemMessage(content=system_prompt)])
 
-        await cl.Message(content=welcome_msg, author="LinShare Assistant").send()
-
-    except Exception as e:
-        await cl.Message(content=f"❌ Connection Failed: {e}").send()
+    await cl.Message(content=welcome_msg, author="LinShare Assistant").send()
 
 @cl.on_message
 async def on_message(message: cl.Message):

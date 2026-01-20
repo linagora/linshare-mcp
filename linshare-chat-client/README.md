@@ -5,6 +5,7 @@ A Chainlit-based chat interface that connects to the LinShare MCP server, allowi
 ## 🚀 Features
 
 - **Multi-LLM Support**: Works with Google Gemini, DeepSeek, Groq, or local OpenAI-compatible models
+- **Settings UI**: Re-configure MCP connection, Auth Mode, and JWT tokens directly from the chat interface
 - **File Upload**: Drag-and-drop file uploads with chunked transfer
 - **Tool Integration**: Full access to LinShare MCP tools (documents, shares, guests, audit)
 - **LinShare Branding**: Custom sky-blue theme matching LinShare's design
@@ -27,10 +28,10 @@ Copy `.env.example` to `.env` and configure:
 LLM_PROVIDER=google
 GOOGLE_API_KEY=your_key_here
 
-# MCP Server URL
+# MCP Server URL (SSE transport)
 MCP_SERVER_SSE_URL=http://127.0.0.1:8100/sse
 
-# LinShare API
+# LinShare API (These can also be configured via Settings UI)
 LINSHARE_USER_URL=https://your-instance.com/linshare/webservice/rest/user/v5
 LINSHARE_JWT_TOKEN=your_jwt_token
 ```
