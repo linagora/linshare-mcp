@@ -10,7 +10,16 @@ This is a Model Context Protocol (MCP) server for **LinShare**, an open-source s
 - **Audit Logs**: Search and filter user activity logs and document history.
 - **Administration**: Manage workgroup members, shared spaces, and perform actions on behalf of other users (User Masquerading).
 
-## 🔌 Usage Modes
+## � Project Structure
+
+```text
+mcp-servers/               # <--- PROJECT ROOT
+├── linshare_mcp/          # MCP Server source code
+├── tests/                 # Test suite
+└── linshare-chat-client/  # Chainlit Chat Assistant
+```
+
+## �🔌 Usage Modes
 
 The LinShare MCP server can be used in two different networking modes, which affects how files are uploaded:
 
@@ -140,8 +149,9 @@ These tools use the **Admin API** and require Service Account authentication.
 
 ## 📦 Installation & Configuration
 
-1. **Install Dependencies** (from the project root):
+1. **Install Dependencies**:
    ```bash
+   # From the project root (mcp-servers/)
    pip install -r requirements.txt
    ```
 
@@ -154,8 +164,11 @@ These tools use the **Admin API** and require Service Account authentication.
     LINSHARE_UPLOAD_DIR=/tmp/uploads # Optional: directory for file reassembly
     ```
 
-3. **Run Server** (from the project root):
+3. **Run Server**:
    ```bash
+   # Navigate to the project root (mcp-servers/)
+   cd mcp-servers
+   
    # Using uv (recommended)
    uv run python -m linshare_mcp.main
    
