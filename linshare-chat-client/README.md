@@ -10,6 +10,18 @@ A Chainlit-based chat interface that connects to the LinShare MCP server, allowi
 - **Tool Integration**: Full access to LinShare MCP tools (documents, shares, guests, audit)
 - **LinShare Branding**: Custom sky-blue theme matching LinShare's design
 
+## ⚙️ Settings UI
+
+You can configure the Chat Assistant dynamically without restarting the server:
+
+1. **Open Settings**: Click the gear icon (**⚙️**) in the bottom-left of the chat window.
+2. **MCP Connection**: Update the `MCP Server SSE URL` (e.g., `http://localhost:8000/sse`).
+3. **Authentication Mode**:
+    - **User Mode**: Toggle "Admin Mode" **OFF**. You can provide a manual JWT or rely on OIDC.
+    - **Admin Mode**: Toggle "Admin Mode" **ON**. Enter your service account username and password.
+4. **JWT Override**: If not using OIDC, toggle "Manual JWT" **ON** and paste your token.
+5. **Persistence**: Your settings are saved per-user in `user_configs.json` and persist between sessions.
+
 ## 📦 Installation
 
 ```bash
@@ -47,7 +59,7 @@ The chat assistant supports native OpenID Connect (OIDC) login via Chainlit.
 3. **Set Redirect URL**: Ensure your OIDC provider allows `http://localhost:8001/auth/oauth/LinShare/callback`.
 4. **Session Security**: Generate a random `CHAINLIT_AUTH_SECRET` (e.g., `openssl rand -hex 32`).
 
-When OIDC is enabled, the client will automatically exchange the provider's token for a LinShare JWT and use it for all MCP tool calls.
+When OIDC is enabled, users must log in via the identity provider to access the Chat Assistant. Note that this is independent of the LinShare API authentication, which must still be configured via the Settings UI or environment variables.
 ```
 
 ## 🏃 Usage
