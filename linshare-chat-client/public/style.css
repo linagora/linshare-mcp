@@ -1,166 +1,141 @@
-/* LinShare "Sky & Clouds" Theme for Chainlit */
+/* Custom styles for LinShare Assistant */
 
 :root {
-  --linshare-primary: #2b6aff;
-  --linshare-gradient-top: #00b4ff;
-  --linshare-gradient-bottom: #004cff;
-  --bg-color: #f0f7ff;
+  --linshare-blue: #0074d3;
+  --linshare-dark-blue: #00599a;
+  --linshare-gradient: linear-gradient(135deg, #0074d3 0%, #00599a 100%);
+  --surface-card: #ffffff;
+  --border-color: #e0e0e0;
 }
 
-/* 1. Global Background - Replicating the Sky & Clouds */
-html,
-body,
-#root,
-.cl-main,
-.cl-chat-interface {
-  background-color: #00b4ff !important;
-  background-image: url('/public/background.png') !important;
-  background-size: cover !important;
-  background-position: center !important;
-  background-attachment: fixed !important;
-  color: #1a2a3a !important;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
-}
-
-/* 2. Header - Clean & Integrated with Logo */
-header,
-[class*="header"],
-[class*="Header"] {
-  background-color: rgba(255, 255, 255, 0.1) !important;
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
-  box-shadow: none !important;
-}
-
-/* Try multiple selectors for logo in header */
-header::before,
-[class*="header"]::before,
-[class*="Header"]::before {
-  content: '' !important;
-  display: block !important;
-  position: absolute !important;
-  left: 15px !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
-  width: 40px !important;
-  height: 40px !important;
-  background-image: url('/public/logo.png') !important;
-  background-size: contain !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1)) !important;
-  z-index: 1000 !important;
-}
-
-header img {
+/* Ensure the logo looks premium */
+img[src*="logo"] {
   max-height: 40px !important;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  width: auto !important;
+  filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.05));
+  margin-right: 12px;
 }
 
-header *,
-[class*="header"] *,
-[class*="Header"] * {
-  color: white !important;
-  font-weight: 600 !important;
+/* Premium Table Styling */
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 16px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  font-size: 0.9rem;
 }
 
-/* 3. Message Area - Modern Floating Bubbles */
-.cl-message-container,
-[class*="message-container"],
-[class*="MessageContainer"] {
-  max-width: 800px !important;
-  margin: 0 auto !important;
-  padding: 20px !important;
+th {
+  background-color: #f8f9fa;
+  color: var(--linshare-dark-blue);
+  font-weight: 600;
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 2px solid var(--linshare-blue);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.75rem;
 }
 
-/* User Messages */
-.cl-user-message,
-[class*="user-message"],
-[class*="UserMessage"] {
-  background-color: white !important;
-  border-radius: 20px !important;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
-  border: none !important;
-  color: #2c3e50 !important;
-  padding: 15px 25px !important;
+td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  background-color: #ffffff;
+  color: #333;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* Assistant Messages with Logo */
-.cl-assistant-message,
-[class*="assistant-message"],
-[class*="AssistantMessage"],
-[class*="ai-message"],
-[class*="AiMessage"] {
-  background-color: rgba(255, 255, 255, 0.9) !important;
-  backdrop-filter: blur(5px);
-  border-radius: 20px !important;
-  border-left: 6px solid var(--linshare-primary) !important;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08) !important;
-  color: #2c3e50 !important;
-  padding: 15px 25px 15px 60px !important;
-  position: relative !important;
+tr:last-child td {
+  border-bottom: none;
 }
 
-/* Add LinShare logo to assistant messages - try multiple selectors */
-.cl-assistant-message::before,
-[class*="assistant-message"]::before,
-[class*="AssistantMessage"]::before,
-[class*="ai-message"]::before,
-[class*="AiMessage"]::before {
-  content: '' !important;
-  display: block !important;
-  position: absolute !important;
-  left: 15px !important;
-  top: 15px !important;
-  width: 32px !important;
-  height: 32px !important;
-  background-image: url('/public/logo.png') !important;
-  background-size: contain !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
-  border-radius: 50% !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
-  z-index: 10 !important;
+tr:hover td {
+  background-color: #f0f7ff;
 }
 
-/* 4. Chat Input - Floating & Rounded */
-.cl-chat-input-container,
-[class*="chat-input"],
-[class*="ChatInput"] {
-  background-color: white !important;
-  border-radius: 30px !important;
-  margin: 0 20px 30px 20px !important;
-  padding: 8px 15px !important;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15) !important;
-  border: 4px solid rgba(255, 255, 255, 0.2) !important;
+/* Truncate long UUIDs in tables automatically */
+td:contains("-") {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: #666;
 }
 
-.cl-chat-input {
+/* Code and Inline tool calls */
+.tool-call-indicator {
+  display: inline-block;
+  background-color: #f8f9fa;
+  border: 1px solid var(--linshare-blue);
+  border-left: 4px solid var(--linshare-blue);
+  padding: 6px 14px;
+  border-radius: 4px 8px 8px 4px;
+  font-size: 0.85rem;
+  color: #555;
+  margin: 4px 0;
+}
+
+.tool-call-indicator code {
   background: transparent !important;
   border: none !important;
+  padding: 0 !important;
+  font-weight: 600;
 }
 
-/* 5. Welcome Title & Controls */
-h1,
-h2,
-h3 {
-  color: white !important;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  font-weight: 800 !important;
+code {
+  background-color: #f1f3f5 !important;
+  border-radius: 4px;
+  padding: 2px 6px !important;
+  font-size: 0.9em !important;
+  color: var(--linshare-dark-blue) !important;
 }
 
-/* Markdown Link Styling */
-a {
-  color: var(--linshare-primary) !important;
-  text-decoration: underline !important;
+/* Callouts or specialized text */
+.linshare-info-card {
+  border-left: 4px solid var(--linshare-blue);
+  background-color: #f0f7ff;
+  padding: 12px 16px;
+  border-radius: 4px 12px 12px 4px;
+  margin: 10px 0;
 }
 
-/* Scrollbar */
+/* Scrollbar styling for better feel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.4) !important;
+  background: #ccc;
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.6) !important;
+  background: var(--linshare-blue);
+}
+
+/* Fade in animation for messages */
+.cl-message {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

@@ -1,7 +1,13 @@
-import requests
 from typing import Optional, Dict, Any
-from ..config import LINSHARE_USER_URL
-from .logging import logger
+from contextvars import ContextVar
+import requests
+from requests.auth import HTTPBasicAuth
+from ..utils.logging import logger
+from ..config import LINSHARE_USER_URL, LINSHARE_JWT_TOKEN
+
+# ContextVars to store per-request credentials
+# Stores either (username, password) tuple or JWT token string
+request_auth: ContextVar[Optional[Dict[str, Any]]] = ContextVar("request_auth", default=None)
 
 class AuthManager:
     """Manages user authentication and JWT tokens."""
@@ -18,7 +24,6 @@ class AuthManager:
     
     def _load_token_from_config(self):
         """Load JWT token from environment variable if available."""
-        from ..config import LINSHARE_JWT_TOKEN
         if LINSHARE_JWT_TOKEN:
             self.token = LINSHARE_JWT_TOKEN
             logger.info("JWT token loaded from configuration")
@@ -118,10 +123,79 @@ class AuthManager:
         raise Exception(f"Login failed: {str(last_error)}")
     
     def _fetch_user_info(self):
-        """Fetch user info using the current JWT token."""
-        if not self.token:
-            return
+        """Lazy fetch user info for the global token."""
+        if self.token:
+            self.user_info = self._fetch_user_info_for_token(self.token)
+
+    def logout(self):
+        """Clear the stored token."""
+        self.token = None
+        self.user_info = None
+        logger.info("User logged out.")
+
+    def get_token(self) -> Optional[str]:
+        """Get the current JWT token, prioritizing the request context."""
+        current_ctx = request_auth.get()
+        if current_ctx and current_ctx.get('type') == 'Bearer':
+            return current_ctx.get('token')
+        return self.token
+
+    def get_user_info(self) -> Optional[Dict[str, Any]]:
+        """Get the current user info, lazy-fetching if missing (handles context)."""
+        current_token = self.get_token()
+        if current_token:
+            # If it's the global token, we might already have user_info
+            if current_token == self.token and self.user_info:
+                return self.user_info
             
+            # For context-based tokens or missing global info, we must fetch
+            # Note: We don't cache context-based user info globally to avoid cross-request contamination
+            return self._fetch_user_info_for_token(current_token)
+        return None
+    
+    def get_current_user(self) -> Optional[Dict[str, Any]]:
+        """Get the current user info (alias for get_user_info)."""
+        return self.get_user_info()
+
+    def get_user_header(self) -> Dict[str, str]:
+        """Get the Authorization header for user JWT requests."""
+        # Priority 1: Current request context (from HTTP header)
+        current_ctx = request_auth.get()
+        if current_ctx and current_ctx.get('type') == 'Bearer':
+            return {
+                'Authorization': f"Bearer {current_ctx['token']}",
+                'accept': 'application/json'
+            }
+
+        # Priority 2: Stored/Configured token
+        if not self.token:
+            raise ValueError("User not logged in. Please use the 'login_user' tool first.")
+        return {
+            'Authorization': f'Bearer {self.token}',
+            'accept': 'application/json'
+        }
+
+    def get_admin_auth(self) -> Any:
+        """Get the HTTPBasicAuth object for admin requests."""
+        # Priority 1: Current request context (from HTTP header)
+        current_ctx = request_auth.get()
+        if current_ctx and current_ctx.get('type') == 'Basic':
+            return current_ctx['auth']
+
+        # Priority 2: Legacy environment variables
+        from ..config import LINSHARE_USERNAME, LINSHARE_PASSWORD
+        
+        if not LINSHARE_USERNAME or not LINSHARE_PASSWORD:
+            raise ValueError("LinShare admin credentials not configured in environment and none provided in request header.")
+            
+        return HTTPBasicAuth(LINSHARE_USERNAME, LINSHARE_PASSWORD)
+
+    def is_logged_in(self) -> bool:
+        """Check if a user is logged in (either via config or request context)."""
+        return self.get_token() is not None
+
+    def _fetch_user_info_for_token(self, token: str) -> Optional[Dict[str, Any]]:
+        """Internal helper to fetch user info for a specific token without side effects."""
         auth_base_norm = self._get_auth_base_url()
         auth_base_orig = LINSHARE_USER_URL.rstrip('/') if LINSHARE_USER_URL else ""
         
@@ -133,70 +207,19 @@ class AuthManager:
             if not base: continue
             url = f"{base}/authentication/authorized"
             try:
-                logger.debug(f"Attempting user info fetch at: {url}")
                 response = requests.get(
                     url,
                     headers={
-                        'Authorization': f'Bearer {self.token}',
+                        'Authorization': f'Bearer {token}',
                         'accept': 'application/json'
                     },
                     timeout=10
                 )
                 if response.status_code == 200:
-                    self.user_info = response.json()
-                    logger.info(f"User info fetched successfully via {base}")
-                    return # SUCCESS
-                else:
-                    logger.debug(f"Fetch failed at {base}: {response.status_code}")
-            except Exception as e:
-                logger.debug(f"Error at {base}: {e}")
-                
-        # If we reach here, all attempts failed
-        logger.warning("Could not fetch user info from any known endpoint.")
-        self.user_info = None
-
-    def logout(self):
-        """Clear the stored token."""
-        self.token = None
-        self.user_info = None
-        logger.info("User logged out.")
-
-    def get_token(self) -> Optional[str]:
-        """Get the current JWT token."""
-        return self.token
-
-    def get_user_info(self) -> Optional[Dict[str, Any]]:
-        """Get the current user info, fetching it if missing."""
-        if self.token and not self.user_info:
-            logger.info("User info missing but token present. Attempting lazy fetch...")
-            self._fetch_user_info()
-        return self.user_info
-    
-    def get_current_user(self) -> Optional[Dict[str, Any]]:
-        """Get the current user info (alias for get_user_info)."""
-        return self.get_user_info()
-
-    def get_user_header(self) -> Dict[str, str]:
-        """Get the Authorization header for user JWT requests."""
-        if not self.token:
-            raise ValueError("User not logged in. Please use the 'login_user' tool first.")
-        return {
-            'Authorization': f'Bearer {self.token}',
-            'accept': 'application/json'
-        }
-
-    def get_admin_auth(self) -> Any:
-        """Get the HTTPBasicAuth object for admin requests."""
-        from ..config import LINSHARE_USERNAME, LINSHARE_PASSWORD
-        from requests.auth import HTTPBasicAuth
-        
-        if not LINSHARE_USERNAME or not LINSHARE_PASSWORD:
-            raise ValueError("LinShare admin credentials not configured in environment (LINSHARE_USERNAME/PASSWORD).")
-            
-        return HTTPBasicAuth(LINSHARE_USERNAME, LINSHARE_PASSWORD)
-
-    def is_logged_in(self) -> bool:
-        return self.token is not None
+                    return response.json()
+            except Exception:
+                pass
+        return None
 
 # Global instance
 auth_manager = AuthManager()

@@ -70,9 +70,15 @@ from langchain_openai import ChatOpenAI
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain_core.tools import tool
+import json
 import httpx
 import base64
-import json
+
+# --- LinShare API Configuration ---
+LINSHARE_USER_URL = os.getenv("LINSHARE_USER_URL") or os.getenv("LINSHARE_BASE_URL", "")
+# Derive AUTH_BASE_URL (strip /user/v5 if present)
+import re
+AUTH_BASE_URL = re.sub(r'/user/v\d+$', '', LINSHARE_USER_URL.rstrip('/'))
 
 # --- User Config Persistence ---
 USER_CONFIGS_FILE = Path(__file__).parent / "user_configs.json"
@@ -264,7 +270,27 @@ async def connect_mcp(settings=None, silent=False):
              headers["Authorization"] = f"Bearer {manual_token.strip()}"
              print(f"🔑 Using Manual JWT for authentication.")
         
-        # Priority 2: Environment Variable
+        # Priority 2: OIDC Token Exchange (Automated)
+        elif AUTH_TYPE == "oidc":
+             # Try to get JWT from user session cache
+             cached_jwt = cl.user_session.get("linshare_jwt")
+             if not cached_jwt:
+                  # Perform exchange
+                  cached_jwt = await get_linshare_jwt_from_oidc()
+                  if cached_jwt:
+                       cl.user_session.set("linshare_jwt", cached_jwt)
+             
+             if cached_jwt:
+                 headers["Authorization"] = f"Bearer {cached_jwt}"
+                 print(f"🔑 Using OIDC-exchanged LinShare JWT.")
+             else:
+                 print("⚠️ OIDC exchange failed. Fallback to Env variable.")
+                 token = os.getenv("LINSHARE_JWT_TOKEN")
+                 if token:
+                     headers["Authorization"] = f"Bearer {token}"
+                     print(f"🔑 Using User JWT (Bearer) from environment.")
+        
+        # Priority 3: Environment Variable
         else:
             token = os.getenv("LINSHARE_JWT_TOKEN")
             if token:
@@ -306,9 +332,19 @@ async def connect_mcp(settings=None, silent=False):
         return mcp_tools
 
     except Exception as e:
-        print(f"❌ Connection Failed: {e}")
+        error_msg = str(e)
+        # Handle TaskGroup/ExceptionGroup which can be cryptic
+        if "ExceptionGroup" in error_msg or "TaskGroup" in error_msg:
+            # Try to extract the first sub-exception message
+            try:
+                if hasattr(e, 'exceptions') and e.exceptions:
+                    sub_e = e.exceptions[0]
+                    error_msg = f"{type(sub_e).__name__}: {sub_e}"
+            except: pass
+            
+        print(f"❌ Connection Failed: {error_msg}")
         if not silent:
-            await cl.Message(content=f"❌ Connection Failed to {sse_url}: {e}").send()
+            await cl.Message(content=f"❌ Connection Failed to {sse_url}: {error_msg}").send()
         return None
 print(f"   LLM Provider: {LLM_PROVIDER}")
 print(f"   Transcription Provider: {TRANSCRIPTION_PROVIDER}")
@@ -340,9 +376,8 @@ def get_llm():
             base_url=LOCAL_LLM_URL,
             max_tokens=2048
         )
-    else:
-        # Default to Google Gemini (Ensure 1.5-flash is used, 2.5 does not exist)
-        return ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=GOOGLE_API_KEY)
+        # Default to Google Gemini
+        return ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=GOOGLE_API_KEY)
 
 @cl.on_audio_start
 async def on_audio_start():
@@ -477,6 +512,79 @@ async def on_audio_end(*args, **kwargs):
     finally:
         cl.user_session.set("audio_buffer", None)
 
+async def get_linshare_jwt_from_oidc():
+    """
+    Exchange OIDC access token (from Chainlit session) for a LinShare JWT.
+    This ensures we only send a LinShare JWT to the MCP server, and not the raw OIDC token.
+    """
+    user = cl.user_session.get("user")
+    if not user:
+        print("⚠️ No user in session. Cannot perform OIDC exchange.")
+        return None
+    
+    # Chainlit's Generic OAuth provider stores tokens in metadata
+    # metadata is usually a dict if the user successfully logged in
+    metadata = getattr(user, "metadata", {})
+    if not metadata:
+        print("⚠️ User found but metadata is empty. Cannot extract OIDC token.")
+        return None
+
+    oidc_token = metadata.get("access_token")
+    if not oidc_token:
+        # Check in 'extra_data' which is where some providers store it
+        oidc_token = metadata.get("extra_data", {}).get("access_token")
+        
+    if not oidc_token:
+        print("⚠️ OIDC login detected but no 'access_token' found in user metadata.")
+        return None
+
+    if not AUTH_BASE_URL:
+        print("⚠️ AUTH_BASE_URL is empty. Check LINSHARE_USER_URL in .env.")
+        return None
+
+    auth_base = AUTH_BASE_URL.rstrip('/')
+    headers = {
+        'Authorization': f'Bearer {oidc_token}',
+        'accept': 'application/json'
+    }
+    
+    print(f"🔄 Exchanging OIDC token for LinShare JWT at {auth_base}...")
+    async with httpx.AsyncClient() as client:
+        try:
+            # 1. Establish session (Cookie generation on LinShare side)
+            auth_url = f"{auth_base}/authentication/authorized"
+            resp = await client.get(auth_url, headers=headers, timeout=10)
+            resp.raise_for_status()
+            
+            # 2. Get/Create JWT for the Chat Assistant
+            jwt_url = f"{auth_base}/jwt"
+            # Get list of existing tokens
+            list_resp = await client.get(jwt_url, headers=headers, timeout=10)
+            tokens = list_resp.json() if list_resp.status_code == 200 else []
+            
+            # Look for our specific token
+            token_desc = "Chat-Assistant-Token"
+            existing = next((t for t in tokens if t.get('description') == token_desc), None)
+            
+            if not existing:
+                print(f"🆕 Creating new LinShare JWT: {token_desc}")
+                create_resp = await client.post(
+                    jwt_url,
+                    headers=headers,
+                    json={"description": token_desc, "expiryDate": None}, # Permanent
+                    timeout=10
+                )
+                create_resp.raise_for_status()
+                existing = create_resp.json()
+            else:
+                print(f"♻️ Reusing existing LinShare JWT: {token_desc}")
+                
+            return existing.get('token')
+            
+        except Exception as e:
+            print(f"❌ OIDC to JWT Exchange failed: {e}")
+            return None
+
 @cl.on_chat_start
 async def on_chat_start():
     user = cl.user_session.get("user")
@@ -526,7 +634,7 @@ async def on_chat_start():
                 "You are currently logged in as a SYSTEM ADMINISTRATOR.\n"
                 "You have ELEVATED PRIVILEGES to manage users, workgroups, and view audit logs.\n"
                 "Do NOT refuse requests to list activities or manage resources on behalf of other users.\n"
-                "Use 'admin_*' tools for these tasks."
+                "Use the tools without any 'admin_' prefix for these tasks (e.g., 'list_user_documents')."
             )
             print(f"✅ Admin Mode Detected. Context injected.")
         else:
@@ -563,19 +671,29 @@ To use a tool, reply in JSON format:
 
 ### CRITICAL GUIDELINES:
 1. 🤖 AUTONOMY: Do NOT ask the user for information you can find yourself. 
-   - Need user details? Call 'user_get_current_user_info'.
-   - Looking for a specific file? Call 'user_search_my_documents' with a name pattern. 
-   - Need to check activities? Call 'user_search_audit'.
-2. 🔒 AUTHENTICATION: You are AUTOMATICALLY logged in if a token is present. Do not ask for passwords/UUIDs unless a tool returns an AUTH ERROR.
+   - Need user details? Use tools like 'user_get_current_user_info'.
+   - Looking for a specific file? Use 'user_search_my_documents' or 'list_user_documents'. 
+   - Need to check activities? Use 'user_search_audit' or 'search_user_audit_logs'.
+2. 🔒 AUTHENTICATION: You are AUTOMATICALLY logged in if a token is present in the headers. 
+   - NEVER ask for passwords/UUIDs unless a tool returns a persistent '401 Unauthorized' or 'Not logged in' error.
+   - If you encounter an authentication error despite being connected, call 'user_check_config' to diagnose the session status before asking the user for help.
 3. 📅 TIME: Use the 'Current Date' above to calculate relative dates. 
    - CRITICAL: All date arguments for tools (like 'begin_date') MUST use the format: YYYY-MM-DDT00:00:00Z.
 4. 📎 ATTACHED FILES: If a user attaches a file, the chat client automatically uploads it. 
    - Check the history for a 'BACKGROUND ACTION' notification.
    - Use the provided 'UUID' from that notification directly for sharing or moving.
    - Do NOT call 'list_upload_files' unless the user specifically mentions picking a file from the server's local disk.
-5. 🛠️ PROACTIVE ACTION: Do NOT narrate your plan or explain what you are about to do. If you have enough information to call a tool (like listing documents or searching for a user), CALL IT IMMEDIATELY. Your goal is to reach the final objective in as few conversational turns as possible.
-6. 📝 RESPONSE: If you need to use a tool, the entire response MUST be the JSON block only.
-7. 🗣️ FINAL ANSWER: If you have all the information required to answer the user (e.g. after a tool has returned data), do NOT output JSON. Instead, provide a helpful and friendly response in plain Markdown.
+5. 🛠️ TOOL TYPES: 
+   - Tools starting with 'user_' are for PERSONAL SPACE (User v5 API). Use these for your own files, login, and personal settings.
+   - Tools NOT starting with 'user_' (and not 'list_upload_files') are for ADMINISTRATIVE/DELEGATION tasks. Use these when you need to act on behalf of other users, manage workgroups, or view global audit logs.
+6. 🛠️ PROACTIVE ACTION: Do NOT narrate your plan or explain what you are about to do. If you have enough information to call a tool (like listing documents or searching for a user), CALL IT IMMEDIATELY. Your goal is to reach the final objective in as few conversational turns as possible.
+7. 📝 RESPONSE: If you need to use a tool, the entire response MUST be the JSON block only.
+8. 🗣️ FINAL ANSWER: If you have all the information required to answer the user (e.g. after a tool has returned data), do NOT output JSON. Instead, provide a helpful and friendly response in plain Markdown.
+9. 💎 DATA PRESENTATION:
+   - Use clean Markdown tables for simple lists (max 3 columns).
+   - NEVER show full UUIDs in tables; use only the first 8 chars (e.g., `3d568a13...`) to keep tables narrow and readable.
+   - Use Bulleted Lists for detailed item descriptions.
+   - For file lists, always include the file size and creation date if available.
 
 Context: User is managing their files on LinShare.
 """
@@ -723,7 +841,7 @@ async def on_message(message: cl.Message):
                     tool_name = tc["name"]
                     args = tc["args"]
                     print(f"🛠️ Tool Call Request: {tool_name}({args})")
-                    await cl.Message(content=f"🤖 calling `{tool_name}`...").send()
+                    await cl.Message(content=f'<span class="tool-call-indicator">🤖 calling `{tool_name}`...</span>').send()
                     res = await session.call_tool(tool_name, arguments=args)
                     tool_output = res.content[0].text
                     
@@ -754,7 +872,7 @@ async def on_message(message: cl.Message):
                         tool_name = data["tool"]
                         args = data.get("arguments", {})
                         print(f"🛠️ JSON Tool Call Request: {tool_name}({args})")
-                        await cl.Message(content=f"🤖 calling `{tool_name}`...").send()
+                        await cl.Message(content=f'<span class="tool-call-indicator">🤖 calling `{tool_name}`...</span>').send()
                         res = await session.call_tool(tool_name, arguments=args)
                         tool_output = res.content[0].text
                         

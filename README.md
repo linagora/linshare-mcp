@@ -189,6 +189,41 @@ These tools use the **Admin API** and require Service Account authentication.
    python -m linshare_mcp.main --mode all
    ```
 
+## 🖥️ Claude Desktop Integration
+
+You can use the LinShare MCP server directly within the Claude Desktop application using the **Local (STDIN) mode**. This allows Claude to access your LinShare files using your local Python environment.
+
+Add the following configuration to your Claude Desktop configuration file:
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "linshare-mcp-server": {
+      "command": "/path/to/your/mcp-servers/.venv/bin/python",
+      "args": [
+        "-m",
+        "linshare_mcp.main"
+      ],
+      "env": {
+        "PYTHONPATH": "/path/to/your/mcp-servers",
+        "LINSHARE_USER_URL": "https://user.linshare.org/linshare/webservice/rest/user/v5",
+        "LINSHARE_ADMIN_URL": "https://user.linshare.org/linshare/webservice/rest/delegation/v2",
+        "LINSHARE_USERNAME": "your-admin-email@domain.com",
+        "LINSHARE_PASSWORD": "your-admin-password",
+        "LINSHARE_JWT_TOKEN": "your-user-jwt-token",
+        "LINSHARE_UPLOAD_DIR": "/path/to/your/LinShareUploads",
+        "LINSHARE_DOWNLOAD_DIR": "/path/to/your/LinShareDownloads"
+      }
+    }
+  }
+}
+```
+
+> [!TIP]
+> Make sure to replace `/path/to/your/` with the actual absolute path to your `mcp-servers` directory. You can find this by running `pwd` in your terminal within that folder.
+
 ## 🧪 Testing
 
 A comprehensive test suite is included to verify all components of the MCP server.

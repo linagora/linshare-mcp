@@ -62,12 +62,11 @@ def list_my_documents(
         result += "\n"
 
         for i, doc in enumerate(paged_docs, offset + 1):
-            result += f"{i}. {doc.get('name', 'Unnamed')}\n"
-            result += f"   - UUID: {doc.get('uuid')}\n"
-            result += f"   - Size: {format_file_size(doc.get('size', 0))}\n"
-            result += f"   - Type: {doc.get('type', 'N/A')}\n"
-            if doc.get('creationDate'):
-                result += f"   - Created: {doc.get('creationDate')}\n"
+            full_uuid = doc.get('uuid', 'N/A')
+            short_uuid = full_uuid[:8] if full_uuid != 'N/A' else 'N/A'
+            result += f"{i}. {doc.get('name', 'Unnamed')} (Size: {format_file_size(doc.get('size', 0))})\n"
+            result += f"   - [Short UUID: {short_uuid}] [Type: {doc.get('type', 'N/A')}] [Created: {doc.get('creationDate', 'N/A')}]\n"
+            result += f"   - (Full UUID for technical use: {full_uuid})\n"
             result += "\n"
 
         return result

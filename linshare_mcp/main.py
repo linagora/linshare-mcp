@@ -33,36 +33,51 @@ class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         # We only protect SSE related endpoints
         if request.url.path in ["/sse", "/messages"]:
+            print(f"🔒 Auth Check: {request.method} {request.url.path}")
             auth_header = request.headers.get("Authorization")
             
             if not auth_header:
                 print(f"🔒 Auth Failed: Missing Authorization header for {request.url.path}")
                 return Response("Unauthorized: Missing Authorization header", status_code=401)
             
-            # 1. Check for Admin Basic Auth
-            if MODE in ["admin", "all"] and auth_header.startswith("Basic "):
+            from .utils.auth import request_auth
+            from requests.auth import HTTPBasicAuth
+            
+            # 1. Handle Admin Basic Auth
+            if auth_header.startswith("Basic "):
                 try:
                     encoded = auth_header.split(" ")[1]
                     decoded = base64.b64decode(encoded).decode("utf-8")
                     user, password = decoded.split(":")
                     
-                    from .config import LINSHARE_USERNAME, LINSHARE_PASSWORD
-                    if user == LINSHARE_USERNAME and password == LINSHARE_PASSWORD:
-                        return await call_next(request)
+                    # Set the context for the current request
+                    request_auth.set({
+                        'type': 'Basic',
+                        'auth': HTTPBasicAuth(user, password)
+                    })
+                    
+                    print(f"🔒 Admin Auth Context Set: {user}")
+                    # Note: We now ALWAYS proceed and let the LinShare API call fail if the creds are bad
+                    return await call_next(request)
                 except Exception as e:
                     print(f"🔒 Admin Auth Error: {e}")
 
-            # 2. Check for User JWT (Bearer)
-            if MODE in ["user", "all"] and auth_header.startswith("Bearer "):
-                # For now, we just check if it looks like a JWT (3 parts)
+            # 2. Handle User JWT (Bearer)
+            if auth_header.startswith("Bearer "):
                 token = auth_header.split(" ")[1]
                 if len(token.split(".")) == 3:
+                     request_auth.set({
+                         'type': 'Bearer',
+                         'token': token
+                     })
+                     print("🔒 User Auth Context Set: JWT detected")
                      return await call_next(request)
                 else:
                     print("🔒 User Auth Failed: Invalid JWT format")
 
-            print(f"🔒 Auth Failed: Invalid credentials for mode {MODE.upper()}")
-            return Response(f"Unauthorized: Invalid credentials for mode {MODE}", status_code=401)
+            print(f"🔒 Auth Failed: No valid credentials for mode {MODE.upper()}")
+            status_msg = f"Unauthorized: Invalid credentials for mode {MODE}"
+            return Response(status_msg, status_code=401)
             
         return await call_next(request)
 

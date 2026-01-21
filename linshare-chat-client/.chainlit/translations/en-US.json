@@ -18,7 +18,7 @@
     },
     "auth": {
         "login": {
-            "title": "Login to access the app",
+            "title": "Login to access LinShare assistant",
             "form": {
                 "email": {
                     "label": "Email address",
@@ -53,7 +53,7 @@
             }
         },
         "provider": {
-            "continue": "Continue with {{provider}}"
+            "continue": "Continue with SSO"
         }
     },
     "chat": {
