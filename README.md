@@ -243,9 +243,53 @@ You can use the LinShare MCP server directly within the Claude Desktop applicati
 | **Windows** | `%APPDATA%\Claude\claude_desktop_config.json` |
 | **Linux** | `~/.config/Claude/claude_desktop_config.json` |
 
-### Configuration
+### User Mode Configuration
 
-Add the following to your `claude_desktop_config.json`:
+Use this configuration if you only need **personal file management** (My Space, Shares, Guests).
+
+```json
+{
+  "mcpServers": {
+    "linshare-user": {
+      "command": "/absolute/path/to/linshare-mcp/.venv/bin/python",
+      "args": ["-m", "linshare_mcp.main", "--mode", "user"],
+      "env": {
+        "PYTHONPATH": "/absolute/path/to/linshare-mcp",
+        "LINSHARE_USER_URL": "https://your-instance.com/linshare/webservice/rest/user/v5",
+        "LINSHARE_JWT_TOKEN": "your-user-jwt-token",
+        "LINSHARE_UPLOAD_DIR": "/absolute/path/to/LinShareUploads",
+        "LINSHARE_DOWNLOAD_DIR": "/absolute/path/to/LinShareDownloads"
+      }
+    }
+  }
+}
+```
+
+### Admin Mode Configuration
+
+Use this configuration if you need **administrative operations** (Workgroups, Delegation, User Management).
+
+```json
+{
+  "mcpServers": {
+    "linshare-admin": {
+      "command": "/absolute/path/to/linshare-mcp/.venv/bin/python",
+      "args": ["-m", "linshare_mcp.main", "--mode", "admin"],
+      "env": {
+        "PYTHONPATH": "/absolute/path/to/linshare-mcp",
+        "LINSHARE_ADMIN_URL": "https://your-instance.com/linshare/webservice/rest/delegation/v2",
+        "LINSHARE_USERNAME": "your-admin-email@domain.com",
+        "LINSHARE_PASSWORD": "your-admin-password",
+        "LINSHARE_UPLOAD_DIR": "/absolute/path/to/LinShareUploads"
+      }
+    }
+  }
+}
+```
+
+### Full Mode Configuration (Both User & Admin)
+
+Use this configuration if you need **all tools** available.
 
 ```json
 {
@@ -269,10 +313,7 @@ Add the following to your `claude_desktop_config.json`:
 ```
 
 > [!TIP]
-> Replace `/absolute/path/to/linshare-mcp` with your actual cloned repository path. Find it by running `pwd` in your terminal within that folder.
-
-> [!WARNING]
-> If you get `ModuleNotFoundError: No module named 'linshare_mcp'`, make sure you ran `pip install -e .` in the virtual environment before starting Claude Desktop.
+> Replace `/absolute/path/to/linshare-mcp` with your actual cloned repository path. Find it by running `pwd` in your terminal.
 
 
 ## 🐳 Docker Deployment
