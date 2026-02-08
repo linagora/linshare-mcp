@@ -149,72 +149,119 @@ These tools use the **Admin API** and require Service Account authentication.
 
 ## 📦 Installation & Configuration
 
-1. **Install Dependencies**:
-   ```bash
-   # From the project root (mcp-servers/)
-   pip install -r requirements.txt
-   ```
+### 1. Clone the Repository
 
-2. **Configure Environment**:
-   Create a `.env` file or set environment variables:
-   ```bash
-    LINSHARE_USER_URL=https://user.linshare.org/...
-    LINSHARE_ADMIN_URL=https://admin.linshare.org/...
-    LINSHARE_JWT_TOKEN=...           # Optional: persistent user session
-    LINSHARE_UPLOAD_DIR=/tmp/uploads # Optional: directory for file reassembly
-    ```
+```bash
+git clone https://github.com/linagora/linshare-mcp.git
+cd linshare-mcp
+```
 
-3. **Run Server**:
-   ```bash
-   # Navigate to the project root (mcp-servers/)
-   cd mcp-servers
-   
-   # Using uv (recommended)
-   uv run python -m linshare_mcp.main
-   
-   # Or standard python
-   python -m linshare_mcp.main
-   ```
+### 2. Create Virtual Environment
 
-4. **Mode Selection** (Optional):
-   The server can load only a subset of tools to simplify the UI for the AI:
-   ```bash
-   # User tools only (for chat assistants)
-   python -m linshare_mcp.main --mode user
-   
-   # Admin tools only (for admin dashboards)
-   python -m linshare_mcp.main --mode admin
-   
-   # All tools (default)
-   python -m linshare_mcp.main --mode all
-   ```
+```bash
+# Using uv (recommended)
+uv venv && source .venv/bin/activate
+
+# Or using standard venv
+python3 -m venv .venv && source .venv/bin/activate
+```
+
+### 3. Install Dependencies
+
+```bash
+# Install the package in editable mode (recommended - prevents ModuleNotFoundError)
+pip install -e .
+
+# Or install from requirements.txt
+pip install -r requirements.txt
+```
+
+> [!IMPORTANT]
+> Using `pip install -e .` is **strongly recommended** as it installs the `linshare_mcp` package properly. This prevents the common `ModuleNotFoundError: No module named 'linshare_mcp'` error when running from Claude Desktop.
+
+### 4. Configure Environment
+
+Copy the example configuration and edit it:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your LinShare instance details:
+
+```bash
+# --- LinShare API URLs ---
+LINSHARE_USER_URL=https://your-instance.com/linshare/webservice/rest/user/v5
+LINSHARE_ADMIN_URL=https://your-instance.com/linshare/webservice/rest/delegation/v2
+
+# --- Authentication ---
+LINSHARE_USERNAME=your-service-account@example.com
+LINSHARE_PASSWORD=your-secret-password
+# LINSHARE_JWT_TOKEN=your-pre-generated-jwt-here  # Optional: persistent user session
+
+# --- Storage Directories ---
+LINSHARE_UPLOAD_DIR=./LinShareUploads
+LINSHARE_DOWNLOAD_DIR=./LinShareDownloads
+```
+
+### 5. Run Server
+
+```bash
+# Using uv (recommended)
+uv run python -m linshare_mcp.main
+
+# Or standard python
+python -m linshare_mcp.main
+```
+
+### 6. Mode Selection (Optional)
+
+The server can load only a subset of tools to simplify the UI for the AI:
+
+```bash
+# User tools only (for chat assistants)
+python -m linshare_mcp.main --mode user
+
+# Admin tools only (for admin dashboards)
+python -m linshare_mcp.main --mode admin
+
+# All tools (default)
+python -m linshare_mcp.main --mode all
+```
+
+---
 
 ## 🖥️ Claude Desktop Integration
 
-You can use the LinShare MCP server directly within the Claude Desktop application using the **Local (STDIN) mode**. This allows Claude to access your LinShare files using your local Python environment.
+You can use the LinShare MCP server directly within the Claude Desktop application using the **Local (STDIN) mode**.
 
-Add the following configuration to your Claude Desktop configuration file:
-- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+### Configuration File Location
+
+| OS | Path |
+|----|------|
+| **macOS** | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| **Windows** | `%APPDATA%\Claude\claude_desktop_config.json` |
+| **Linux** | `~/.config/Claude/claude_desktop_config.json` |
+
+### Configuration
+
+Add the following to your `claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "linshare-mcp-server": {
-      "command": "/path/to/your/mcp-servers/.venv/bin/python",
-      "args": [
-        "-m",
-        "linshare_mcp.main"
-      ],
+      "command": "/absolute/path/to/linshare-mcp/.venv/bin/python",
+      "args": ["-m", "linshare_mcp.main"],
       "env": {
-        "PYTHONPATH": "/path/to/your/mcp-servers",
-        "LINSHARE_USER_URL": "https://user.linshare.org/linshare/webservice/rest/user/v5",
-        "LINSHARE_ADMIN_URL": "https://user.linshare.org/linshare/webservice/rest/delegation/v2",
+        "PYTHONPATH": "/absolute/path/to/linshare-mcp",
+        "LINSHARE_USER_URL": "https://your-instance.com/linshare/webservice/rest/user/v5",
+        "LINSHARE_ADMIN_URL": "https://your-instance.com/linshare/webservice/rest/delegation/v2",
         "LINSHARE_USERNAME": "your-admin-email@domain.com",
         "LINSHARE_PASSWORD": "your-admin-password",
         "LINSHARE_JWT_TOKEN": "your-user-jwt-token",
-        "LINSHARE_UPLOAD_DIR": "/path/to/your/LinShareUploads",
-        "LINSHARE_DOWNLOAD_DIR": "/path/to/your/LinShareDownloads"
+        "LINSHARE_UPLOAD_DIR": "/absolute/path/to/LinShareUploads",
+        "LINSHARE_DOWNLOAD_DIR": "/absolute/path/to/LinShareDownloads"
       }
     }
   }
@@ -222,9 +269,57 @@ Add the following configuration to your Claude Desktop configuration file:
 ```
 
 > [!TIP]
-> Make sure to replace `/path/to/your/` with the actual absolute path to your `mcp-servers` directory. You can find this by running `pwd` in your terminal within that folder.
+> Replace `/absolute/path/to/linshare-mcp` with your actual cloned repository path. Find it by running `pwd` in your terminal within that folder.
 
-## 🧪 Testing
+> [!WARNING]
+> If you get `ModuleNotFoundError: No module named 'linshare_mcp'`, make sure you ran `pip install -e .` in the virtual environment before starting Claude Desktop.
+
+
+## 🐳 Docker Deployment
+
+The fastest way to run the entire LinShare Assistant (Server + Chat) is using Docker Compose.
+
+### 1. Configure Environment
+Ensure your `.env` file at the root is populated with:
+- `LINSHARE_USER_URL`
+- `LINSHARE_JWT_TOKEN` (or Basic Auth credentials)
+- `GOOGLE_API_KEY` (or Local LLM settings)
+
+### 2. Build and Run
+```bash
+# Build the unified image and start services
+docker compose up --build -d
+```
+
+### 3. Access
+- **Chat Assistant**: [http://localhost:8080](http://localhost:8080)
+- **MCP SSE Server**: [http://localhost:8000/sse](http://localhost:8000/sse)
+
+To modify parameters, simply edit the `.env` file and restart:
+```bash
+docker compose up -d
+```
+
+## ✅ Quality Assurance & Testing
+
+To ensure the AI Assistant behaves correctly and uses the right tools, we provide both manual and automated testing resources.
+
+### 1. Manual Testing (Prompts)
+We have a curated list of prompts for different scenarios (User Mode vs. Admin Mode).
+👉 **[See PROMPTS.md](PROMPTS.md)**
+
+### 2. Automated Prompt Verification
+You can programmatically verify that the AI assistant invokes the correct LinShare tools for specific prompts.
+```bash
+# Set your Gemini API key
+export GOOGLE_API_KEY=your_key_here
+
+# Run the automated test suite
+python scripts/auto_test_prompts.py
+```
+This script connects to the MCP server via STDIN and asserts that the LLM selects the expected tools for each test case.
+
+## 🧪 Technical Tests
 
 A comprehensive test suite is included to verify all components of the MCP server.
 
