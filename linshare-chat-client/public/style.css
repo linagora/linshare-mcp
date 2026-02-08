@@ -1,0 +1,141 @@
+/* Custom styles for LinShare Assistant */
+
+:root {
+  --linshare-blue: #0074d3;
+  --linshare-dark-blue: #00599a;
+  --linshare-gradient: linear-gradient(135deg, #0074d3 0%, #00599a 100%);
+  --surface-card: #ffffff;
+  --border-color: #e0e0e0;
+}
+
+/* Ensure the logo looks premium */
+img[src*="logo"] {
+  max-height: 40px !important;
+  width: auto !important;
+  filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.05));
+  margin-right: 12px;
+}
+
+/* Premium Table Styling */
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 16px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  font-size: 0.9rem;
+}
+
+th {
+  background-color: #f8f9fa;
+  color: var(--linshare-dark-blue);
+  font-weight: 600;
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 2px solid var(--linshare-blue);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.75rem;
+}
+
+td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  background-color: #ffffff;
+  color: #333;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+tr:hover td {
+  background-color: #f0f7ff;
+}
+
+/* Truncate long UUIDs in tables automatically */
+td:contains("-") {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+/* Code and Inline tool calls */
+.tool-call-indicator {
+  display: inline-block;
+  background-color: #f8f9fa;
+  border: 1px solid var(--linshare-blue);
+  border-left: 4px solid var(--linshare-blue);
+  padding: 6px 14px;
+  border-radius: 4px 8px 8px 4px;
+  font-size: 0.85rem;
+  color: #555;
+  margin: 4px 0;
+}
+
+.tool-call-indicator code {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  font-weight: 600;
+}
+
+code {
+  background-color: #f1f3f5 !important;
+  border-radius: 4px;
+  padding: 2px 6px !important;
+  font-size: 0.9em !important;
+  color: var(--linshare-dark-blue) !important;
+}
+
+/* Callouts or specialized text */
+.linshare-info-card {
+  border-left: 4px solid var(--linshare-blue);
+  background-color: #f0f7ff;
+  padding: 12px 16px;
+  border-radius: 4px 12px 12px 4px;
+  margin: 10px 0;
+}
+
+/* Scrollbar styling for better feel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--linshare-blue);
+}
+
+/* Fade in animation for messages */
+.cl-message {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

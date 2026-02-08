@@ -5,10 +5,14 @@ from ..utils.common import format_file_size, guess_mime_type
 
 @mcp.tool()
 def list_upload_files() -> str:
-    """List all files in the upload directory available for uploading.
+    """[SERVER SIDE] List local files on the remote server's disk available for pick-up.
+    
+    ⚠️ IMPORTANT: Use this ONLY if the user wants to upload a file already residing on the server.
+    If the user has attached a file to the chat, it is automatically handled by the system 
+    and you should check for 'BACKGROUND ACTION' history messages for its UUID instead.
     
     Returns:
-        Formatted list of files ready to upload
+        Formatted list of files on the server's disk
     """
     logger.info("Tool called: list_upload_files()")
     

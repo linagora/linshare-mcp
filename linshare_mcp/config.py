@@ -6,12 +6,28 @@ from pathlib import Path
 LINSHARE_ADMIN_URL = os.getenv("LINSHARE_ADMIN_URL")
 LINSHARE_USER_URL = os.getenv("LINSHARE_USER_URL")
 
-# Backward compatibility: if only LINSHARE_BASE_URL is set, use it for both
+# Backward compatibility and smart fallbacks
 LINSHARE_BASE_URL = os.getenv("LINSHARE_BASE_URL")
-if LINSHARE_BASE_URL and not LINSHARE_ADMIN_URL:
-    LINSHARE_ADMIN_URL = LINSHARE_BASE_URL
-if LINSHARE_BASE_URL and not LINSHARE_USER_URL:
-    LINSHARE_USER_URL = LINSHARE_BASE_URL
+
+# 1. If global base URL is set, use it for both
+if LINSHARE_BASE_URL:
+    if not LINSHARE_ADMIN_URL: LINSHARE_ADMIN_URL = LINSHARE_BASE_URL
+    if not LINSHARE_USER_URL: LINSHARE_USER_URL = LINSHARE_BASE_URL
+
+# 2. Smart inferring: If only one is set, try to derive the other
+if LINSHARE_ADMIN_URL and not LINSHARE_USER_URL:
+    # Try to swap /delegation/v2 for /user/v5
+    if "/delegation/v2" in LINSHARE_ADMIN_URL:
+        LINSHARE_USER_URL = LINSHARE_ADMIN_URL.replace("/delegation/v2", "/user/v5")
+    else:
+        LINSHARE_USER_URL = LINSHARE_ADMIN_URL
+
+if LINSHARE_USER_URL and not LINSHARE_ADMIN_URL:
+    # Try to swap /user/v5 for /delegation/v2
+    if "/user/v5" in LINSHARE_USER_URL:
+        LINSHARE_ADMIN_URL = LINSHARE_USER_URL.replace("/user/v5", "/delegation/v2")
+    else:
+        LINSHARE_ADMIN_URL = LINSHARE_USER_URL
 
 # Service Account credentials (for admin operations)
 LINSHARE_USERNAME = os.getenv("LINSHARE_USERNAME")

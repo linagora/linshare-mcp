@@ -21,8 +21,8 @@ def search_user_audit_logs(
         action: Filter by action type (CREATE, UPDATE, DELETE, GET, DOWNLOAD, SUCCESS, FAILURE, PURGE)
         entry_type: Filter by entry type (SHARE_ENTRY, DOCUMENT_ENTRY, GUEST, WORK_SPACE, etc.)
         force_all: If true, returns all audit entries for the user (default: false)
-        begin_date: Start date for filtering logs (ISO 8601: YYYY-MM-DD)
-        end_date: End date for filtering logs (ISO 8601: YYYY-MM-DD)
+        begin_date: Start date for filtering logs (Format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ)
+        end_date: End date for filtering logs (Format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ)
         max_results: Maximum number of results to return (default: 50)
     
     Returns:
@@ -33,13 +33,20 @@ def search_user_audit_logs(
     if not LINSHARE_BASE_URL:
         return "Error: LINSHARE_ADMIN_URL not configured."
     
+    def normalize_date(d_str):
+        if not d_str: return None
+        # If it's just YYYY-MM-DD, try to append T00:00:00Z for API compatibility if needed
+        # But most LinShare APIs accept YYYY-MM-DD if it's delegation.
+        # We'll just ensure it's a string and trimmed.
+        return d_str.strip()
+
     try:
         params = {}
         if action: params["action"] = action
         if entry_type: params["type"] = entry_type
         if force_all: params["forceAll"] = "true"
-        if begin_date: params["beginDate"] = begin_date
-        if end_date: params["endDate"] = end_date
+        if begin_date: params["beginDate"] = normalize_date(begin_date)
+        if end_date: params["endDate"] = normalize_date(end_date)
         
         url = f"{LINSHARE_BASE_URL}/audit/{actor_uuid}"
         admin_auth = auth_manager.get_admin_auth()
