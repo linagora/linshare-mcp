@@ -5,3 +5,5 @@ python-dotenv
 httpx
 uvicorn
 chainlit
+langchain-google-genai
+langchain-openai
