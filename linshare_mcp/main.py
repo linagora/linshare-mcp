@@ -23,6 +23,7 @@ _args, _ = _parser.parse_known_args()
 MODE = _args.mode or get_mode()
 
 from .app import mcp
+from .utils.logging import logger
 
 # --- Authentication Middleware ---
 import base64
@@ -88,12 +89,12 @@ from .resources import files as resource_files
 if MODE in ["user", "all"]:
     from .tools.user import auth, myspace, users as user_users, files as user_files
     from .tools.user import received_shares, guests, audit as user_audit, contact_lists
-    print(f"📦 Loaded USER tools")
+    logger.info("Loaded USER tools")
 
 if MODE in ["admin", "all"]:
     from .tools.admin import workgroups as admin_workgroups, users as admin_users
     from .tools.admin import myspace as admin_myspace, audit as admin_audit
-    print(f"📦 Loaded ADMIN tools")
+    logger.info("Loaded ADMIN tools")
 
 def main():
     """Main entry point for the LinShare MCP server."""
@@ -110,17 +111,17 @@ def main():
     args = parser.parse_args()
     
     mode_emoji = {"user": "👤", "admin": "🛡️", "all": "🌐"}
-    print(f"{mode_emoji.get(MODE, '🌐')} LinShare MCP Server starting in {MODE.upper()} mode")
+    logger.info(f"{mode_emoji.get(MODE, '🌐')} LinShare MCP Server starting in {MODE.upper()} mode")
     
     if args.transport == "sse":
-        print(f"🔌 Listening on http://{args.host}:{args.port} (SSE)")
+        logger.info(f"🔌 Listening on http://{args.host}:{args.port} (SSE)")
         import uvicorn
         # FastMCP creates an ASGI app for SSE transport
         app = mcp.sse_app()
         app.add_middleware(AuthMiddleware)
         uvicorn.run(app, host=args.host, port=args.port)
     else:
-        print(f"🔌 Running in STDIO mode")
+        logger.info("🔌 Running in STDIO mode")
         mcp.run(transport='stdio')
 
 if __name__ == "__main__":
