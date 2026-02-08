@@ -10,7 +10,7 @@ from ...utils.common import format_file_size
 # ------------------------------------------------------------------------------
 
 @mcp.tool()
-def user_list_my_received_shares() -> str:
+def user_list_received_shares() -> str:
     """List all shares received by the logged-in user.
     
     Returns:
@@ -73,7 +73,7 @@ def user_list_my_received_shares() -> str:
         return f"Error: {str(e)}"
 
 @mcp.tool()
-def user_copy_received_share_to_my_space(share_uuid: str) -> str:
+def user_copy_received_share(share_uuid: str) -> str:
     """Copy a received share to your personal space.
     
     Args:

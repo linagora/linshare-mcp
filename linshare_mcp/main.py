@@ -28,6 +28,7 @@ from .utils.logging import logger
 # --- Authentication Middleware ---
 import base64
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.responses import Response
 
 class AuthMiddleware(BaseHTTPMiddleware):
@@ -35,6 +36,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         # We only protect SSE related endpoints
         if request.url.path in ["/sse", "/messages"]:
             print(f"🔒 Auth Check: {request.method} {request.url.path}")
+            print(f"🔍 DEBUG Headers: {dict(request.headers)}")
             auth_header = request.headers.get("Authorization")
             
             if not auth_header:
@@ -118,6 +120,8 @@ def main():
         import uvicorn
         # FastMCP creates an ASGI app for SSE transport
         app = mcp.sse_app()
+        # Add TrustedHostMiddleware to allow all hosts (fix for potential 421 Misdirected Request)
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
         app.add_middleware(AuthMiddleware)
         uvicorn.run(app, host=args.host, port=args.port)
     else:

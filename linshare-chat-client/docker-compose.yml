@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  mcp-server:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command: mcp
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../.env
+    environment:
+      - LINSHARE_MCP_MODE=all
+    restart: unless-stopped
+
+  chat-assistant:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command: chat
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mcp-server
+    env_file:
+      - ../.env
+    environment:
+      - MCP_SERVER_SSE_URL=http://mcp-server:8000/sse
+    restart: unless-stopped

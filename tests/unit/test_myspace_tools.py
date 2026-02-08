@@ -73,9 +73,9 @@ class TestMySpaceTools:
                 mock_auth.is_logged_in.return_value = True
                 mock_auth.get_user_header.return_value = {"Authorization": "Bearer token"}
                 with patch("linshare_mcp.tools.user.myspace.requests.get", return_value=mock_resp):
-                    from linshare_mcp.tools.user.myspace import list_my_documents
+                    from linshare_mcp.tools.user.myspace import user_list_documents
                     
-                    result = list_my_documents()
+                    result = user_list_documents()
                     
                     assert "Personal Documents" in result
                     assert "test_file.txt" in result
@@ -96,9 +96,9 @@ class TestMySpaceTools:
                 with patch("linshare_mcp.tools.user.myspace.requests.post", return_value=mock_resp):
                     # Mocking helpers to avoid network calls inside them
                     with patch("linshare_mcp.tools.user.myspace._get_share_expiration_policy", return_value=None):
-                        from linshare_mcp.tools.user.myspace import share_my_documents
+                        from linshare_mcp.tools.user.myspace import user_share_documents
                         
-                        result = share_my_documents(
+                        result = user_share_documents(
                             document_uuids=["doc-1"],
                             recipient_emails=["recip@test.org"]
                         )

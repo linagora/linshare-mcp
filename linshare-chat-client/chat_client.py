@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 # 1. Load environment variables before ANY other imports
 env_path = Path(__file__).parent / ".env"
-load_dotenv(dotenv_path=env_path, override=True)
+load_dotenv(dotenv_path=env_path, override=False)
 
 # 2. DEBUG: Check and Force OIDC variables for Chainlit auto-discovery
 AUTH_TYPE = os.getenv("AUTH_TYPE", "none").lower()
@@ -243,6 +243,8 @@ async def connect_mcp(settings=None, silent=False):
         settings = load_user_config(user_id)
     
     sse_url = settings.get("mcp_url") or os.getenv("MCP_SERVER_SSE_URL", "")
+    if sse_url:
+        sse_url = sse_url.strip()
     
     if not sse_url:
         print("⚠️ No MCP URL configured. Skipping connection.")
@@ -308,10 +310,39 @@ async def connect_mcp(settings=None, silent=False):
             headers["Authorization"] = f"Basic {encoded}"
             print(f"🔑 Using Admin Basic Auth for {user_name}")
 
+    
+    # ---------------------------------------------------------
+    # WORKAROUND: Force resolve hostname to IP to avoid 421 Misdirected Request
+    # from httpx connection pooling/coalescing logic.
+    try:
+        from urllib.parse import urlparse
+        import socket
+        parsed = urlparse(sse_url)
+        if parsed.hostname and parsed.hostname != "localhost" and parsed.hostname != "127.0.0.1":
+             try:
+                 ip = socket.gethostbyname(parsed.hostname)
+                 print(f"🔄 Resolved {parsed.hostname} -> {ip}")
+                 sse_url = sse_url.replace(parsed.hostname, ip, 1)
+             except Exception as e:
+                 print(f"⚠️ DNS Resolution failed for {parsed.hostname}: {e}")
+    except ImportError:
+        pass
+    # ---------------------------------------------------------
+
     print(f"🔄 Connecting to SSE Server at: {sse_url}")
     try:
+        # Custom factory to force HTTP/1.1 (fixes 421 Misdirected Request in some Docker setups)
+        def custom_httpx_factory(headers=None, timeout=None, auth=None):
+            return httpx.AsyncClient(
+                http2=False,
+                trust_env=False, # Ignore proxy env vars
+                headers=headers, 
+                timeout=timeout, 
+                auth=auth
+            )
+
         # Keep connection open manually
-        sse_ctx = sse_client(sse_url, headers=headers)
+        sse_ctx = sse_client(sse_url, headers=headers, httpx_client_factory=custom_httpx_factory)
         streams = await sse_ctx.__aenter__()
         
         session_ctx = ClientSession(streams[0], streams[1])
@@ -736,8 +767,9 @@ async def on_message(message: cl.Message):
     # Handle File Uploads (Drag & Drop)
     if message.elements:
         for element in message.elements:
-            if element.type == "file":
-                await cl.Message(content=f"📤 Processing file: {element.name}...").send()
+            # Support all file types including images, audio, video
+            if element.type in ["file", "image", "audio", "video"]:
+                await cl.Message(content=f"📤 Processing {element.type}: {element.name}...").send()
                 # Manual chunked upload logic
                 try:
                     with open(element.path, "rb") as f:

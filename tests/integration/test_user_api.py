@@ -3,7 +3,7 @@ Integration tests for the User API.
 """
 import pytest
 import requests
-from linshare_mcp.tools.user.myspace import list_my_documents
+from linshare_mcp.tools.user.myspace import user_list_documents
 from linshare_mcp.tools.user.auth import user_get_current_user_info
 
 
@@ -23,7 +23,7 @@ class TestUserAPIIntegration:
 
     def test_list_my_documents_live(self):
         """Test listing documents with real JWT."""
-        result = list_my_documents(limit=5)
+        result = user_list_documents(limit=5)
         
         if "Error" in result and "logged in" in result.lower():
             pytest.skip("No LINSHARE_JWT_TOKEN configured for integration tests")
