@@ -19,3 +19,8 @@ run_server.py
 linshare-chat-client/debug_audio_dump.*
 linshare-chat-client/user_configs.json
 linshare_mcp.egg-info/
+
+# Test files (local development only)
+linshare-chat-client/test_connection.py
+linshare-chat-client/test_doc_search.py
+linshare-chat-client/test_local_llm.py
