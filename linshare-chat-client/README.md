@@ -21,7 +21,8 @@ You can run the full stack (Chat + MCP Server) using Docker Compose located in t
 ### 2. Build and Run
 
 ```bash
-# Build the image and start
+# From the project root
+cd docker
 docker compose up --build -d
 ```
 
@@ -142,4 +143,3 @@ When OIDC is enabled, users must log in via the identity provider to access the 
 | `server_sse.py` | SSE server entrypoint for MCP |
 | `public/` | Static assets (CSS, images) |
 | `.chainlit/` | Chainlit configuration |
-docker-compose.yml | Docker Compose file for full stack deployment |

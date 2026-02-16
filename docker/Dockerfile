@@ -23,7 +23,8 @@ COPY linshare-chat-client /app/linshare-chat-client
 COPY scripts /app/scripts
 
 # 3. Setup Entrypoint Script
-RUN chmod +x /app/scripts/docker-entrypoint.sh
+COPY docker/docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
 
 # Default environment variables
 ENV PYTHONPATH=/app
@@ -33,4 +34,4 @@ ENV MCP_SERVER_SSE_URL=http://localhost:8000/sse
 # Expose ports
 EXPOSE 8000 8080
 
-ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

@@ -13,10 +13,23 @@ This is a Model Context Protocol (MCP) server for **LinShare**, an open-source s
 ## � Project Structure
 
 ```text
-mcp-servers/               # <--- PROJECT ROOT
-├── linshare_mcp/          # MCP Server source code
-├── tests/                 # Test suite
-└── linshare-chat-client/  # Chainlit Chat Assistant
+mcp-servers/                       # <--- PROJECT ROOT
+├── linshare_mcp/                  # MCP Server package
+│   ├── tools/user/                # User API tools
+│   ├── tools/admin/               # Admin/Delegation API tools
+│   └── utils/                     # Auth, config, helpers
+├── tests/                         # Unit & integration tests
+├── scripts/                       # Dev utilities
+├── docker/                        # Docker deployment
+│   ├── Dockerfile                 # Unified image (MCP + Chat)
+│   ├── docker-compose.yml         # Full stack orchestration
+│   └── docker-entrypoint.sh       # Container entrypoint
+├── linshare-chat-client/          # Chainlit Chat Assistant
+│   ├── chat_client.py             # Main application
+│   ├── server_sse.py              # SSE server entrypoint
+│   └── public/                    # Static assets
+├── .env.example                   # Configuration template
+└── requirements.txt               # Python dependencies
 ```
 
 ## �🔌 Usage Modes
@@ -25,7 +38,7 @@ The LinShare MCP server can be used in two different networking modes, which aff
 
 ### 1. Local (STDIN) Mode
 Use this mode when the MCP server and the client (e.g., Claude Desktop) are running on the **same machine**.
-- **Upload Tool**: `upload_file_from_local_directory`
+- **Upload Tool**: `user_upload_file`
 - **How it works**: The server directly reads files from a local directory (configured via `LINSHARE_UPLOAD_DIR`).
 - **Best for**: Desktop usage where the AI has access to your local files.
 
@@ -320,7 +333,6 @@ Use this configuration if you need **all tools** available.
 
 The fastest way to run the entire LinShare Assistant (Server + Chat) is using Docker Compose.
 
-### 1. Configure Environment
 ### 1. Configure Server Environment (.env)
 
 Create a `.env` file in the **project root** containing server-wide settings (URLs, API Keys).
@@ -347,8 +359,8 @@ GROQ_API_KEY=your_groq_key
 ### 2. Build and Run
 
 ```bash
-# Navigate to the chat client directory
-cd linshare-chat-client
+# Navigate to the docker directory
+cd docker
 
 # Start everything (rebuilds if needed)
 docker compose up --build -d
