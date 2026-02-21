@@ -12,7 +12,7 @@ A Chainlit-based chat interface that connects to the LinShare MCP server, allowi
 
 ## 🐳 Docker (Recommended)
 
-You can run the full stack (Chat + MCP Server) using Docker Compose located in this directory.
+You can run the full stack (Chat + MCP Server) using Docker Compose.
 
 ### 1. Requirements
 - Docker & Docker Compose installed
@@ -26,10 +26,8 @@ cd docker
 docker compose up --build -d
 ```
 
-The Dockerfile is located in the parent directory and builds a unified image for both services.
-
 ### 3. Access
-- **Chat Interface**: [http://localhost:8080](http://localhost:8080)
+- **Chat Interface**: [http://localhost:8090](http://localhost:8090)
 - **MCP Server SSE**: [http://localhost:8000/sse](http://localhost:8000/sse)
 
 ---

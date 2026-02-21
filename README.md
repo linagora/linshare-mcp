@@ -27,9 +27,11 @@ mcp-servers/                       # <--- PROJECT ROOT
 ├── linshare-chat-client/          # Chainlit Chat Assistant
 │   ├── chat_client.py             # Main application
 │   ├── server_sse.py              # SSE server entrypoint
-│   └── public/                    # Static assets
+│   ├── public/                    # Static assets
+│   └── README.md                  # Chat client documentation
 ├── .env.example                   # Configuration template
-└── requirements.txt               # Python dependencies
+├── requirements.txt               # Python dependencies
+└── README.md                      # Main project documentation
 ```
 
 ## �🔌 Usage Modes
@@ -42,10 +44,12 @@ Use this mode when the MCP server and the client (e.g., Claude Desktop) are runn
 - **How it works**: The server directly reads files from a local directory (configured via `LINSHARE_UPLOAD_DIR`).
 - **Best for**: Desktop usage where the AI has access to your local files.
 
+### 2. Remote (SSE) Mode
+Use this mode when the MCP server runs on a **different machine** or inside **Docker**.
 - **Upload Tools**: `user_remote_upload_from_url` or `user_remote_upload_by_chunks`
 - **How it works**: Since the server cannot access the client's local disk, files are either fetched from a public URL or sent in base64-encoded chunks over the MCP protocol.
 - **Authentication**: Access to the `/sse` and `/messages` endpoints is protected by **Headers-based authentication** (see below).
-- **Best for**: Web-based AI assistants or distributed setups.
+- **Best for**: Web-based AI assistants, Docker deployments, or distributed setups.
 
 ## 🤖 Chat Assistant
 
@@ -220,11 +224,16 @@ LINSHARE_DOWNLOAD_DIR=./LinShareDownloads
 ### 5. Run Server
 
 ```bash
+# --- Local (STDIN) Mode (default) ---
 # Using uv (recommended)
 uv run python -m linshare_mcp.main
 
 # Or standard python
 python -m linshare_mcp.main
+
+# --- Remote (SSE) Mode ---
+# Run the MCP server as an SSE endpoint (for Docker or remote clients)
+python -m linshare_mcp.main --transport sse --host 0.0.0.0 --port 8000
 ```
 
 ### 6. Mode Selection (Optional)
@@ -337,7 +346,7 @@ The fastest way to run the entire LinShare Assistant (Server + Chat) is using Do
 
 Create a `.env` file in the **project root** containing server-wide settings (URLs, API Keys).
 
-**Do NOT puts user credentials (passwords/JWT) here.**
+**Do NOT put user credentials (passwords/JWT) here.**
 
 ```bash
 # --- LinShare URLs ---
@@ -371,7 +380,7 @@ docker compose down
 
 ### 3. Configure User via Interface (Settings ⚙️)
 
-Open [http://localhost:8080](http://localhost:8080) and click the **Settings (⚙️)** icon (bottom-left).
+Open [http://localhost:8090](http://localhost:8090) and click the **Settings (⚙️)** icon (bottom-left).
 
 **Here you configure per-user credentials:**
 

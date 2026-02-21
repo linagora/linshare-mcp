@@ -19,3 +19,6 @@ dependencies = [
 
 [project.scripts]
 # Entry points
+
+[tool.setuptools.packages.find]
+include = ["linshare_mcp*"]

@@ -18,11 +18,10 @@ services:
       dockerfile: docker/Dockerfile
     command: chat
     ports:
-      - "8080:8080"
+      - "8090:8080"
     depends_on:
       - mcp-server
     env_file:
       - ../.env
-    environment:
-      - MCP_SERVER_SSE_URL=http://mcp-server:8000/sse
+
     restart: unless-stopped
