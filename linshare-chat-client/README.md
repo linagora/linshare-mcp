@@ -24,12 +24,27 @@ You can configure the Chat Assistant dynamically without restarting the server:
 
 ## 📦 Installation
 
+From the repository root:
+
 ```bash
 cd linshare-chat-client
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Option A — standard venv (recommended on Debian/Ubuntu)
+python3 -m venv venv
+source venv/bin/activate              # Windows: venv\Scripts\activate
 pip install -r requirements.txt
+
+# Option B — uv
+uv venv venv
+source venv/bin/activate              # Windows: venv\Scripts\activate
+uv pip install -r requirements.txt
 ```
+
+> [!NOTE]
+> On Debian/Ubuntu the binary is `python3`, not `python` (unless the `python-is-python3` package is installed). Using `python` will fail with `command not found`.
+
+> [!NOTE]
+> `uv venv` does **not** install `pip` into the venv, so you must use `uv pip install ...` afterwards — plain `pip` would resolve to the system pip and fail with `error: externally-managed-environment` (PEP 668). `python3 -m venv` does install pip, so plain `pip` works there.
 
 ## ⚙️ Configuration
 

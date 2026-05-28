@@ -29,6 +29,8 @@ Use this mode when the MCP server and the client (e.g., Claude Desktop) are runn
 - **How it works**: The server directly reads files from a local directory (configured via `LINSHARE_UPLOAD_DIR`).
 - **Best for**: Desktop usage where the AI has access to your local files.
 
+### 2. Remote (SSE) Mode
+Use this mode when the MCP server runs on a different host than the client (e.g., a containerized backend, the bundled chat client, or any web-based AI assistant).
 - **Upload Tools**: `user_remote_upload_from_url` or `user_remote_upload_by_chunks`
 - **How it works**: Since the server cannot access the client's local disk, files are either fetched from a public URL or sent in base64-encoded chunks over the MCP protocol.
 - **Authentication**: Access to the `/sse` and `/messages` endpoints is protected by **Headers-based authentication** (see below).
@@ -169,15 +171,20 @@ python3 -m venv .venv && source .venv/bin/activate
 ### 3. Install Dependencies
 
 ```bash
-# Install the package in editable mode (recommended - prevents ModuleNotFoundError)
-pip install -e .
+# If you created the venv with `uv venv` (recommended)
+uv pip install -e .
 
-# Or install from requirements.txt
-pip install -r requirements.txt
+# If you created the venv with `python3 -m venv`
+pip install -e .
 ```
 
 > [!IMPORTANT]
-> Using `pip install -e .` is **strongly recommended** as it installs the `linshare_mcp` package properly. This prevents the common `ModuleNotFoundError: No module named 'linshare_mcp'` error when running from Claude Desktop.
+> Use the installer that matches your venv tool. `uv venv` does **not** bootstrap `pip` into the venv, so calling `pip` afterwards resolves to the system `pip` and fails on Debian/Ubuntu with `error: externally-managed-environment` (PEP 668). Either use `uv pip ...` (recommended) or run `python -m ensurepip --upgrade` once before falling back to plain `pip`.
+
+> [!IMPORTANT]
+> Editable install (`-e .`) is **strongly recommended** — it registers the `linshare_mcp` package on `sys.path` and prevents the common `ModuleNotFoundError: No module named 'linshare_mcp'` error when running from Claude Desktop.
+
+If you prefer to install from `requirements.txt` instead of the editable package, the same rule applies — use `uv pip install -r requirements.txt` or `pip install -r requirements.txt` depending on which venv tool you used.
 
 ### 4. Configure Environment
 
@@ -206,6 +213,12 @@ LINSHARE_DOWNLOAD_DIR=./LinShareDownloads
 
 ### 5. Run Server
 
+The server supports two transports, selected with `--transport`:
+
+#### Local (STDIN) — default
+
+For Claude Desktop or any client running on the same machine.
+
 ```bash
 # Using uv (recommended)
 uv run python -m linshare_mcp.main
@@ -213,6 +226,29 @@ uv run python -m linshare_mcp.main
 # Or standard python
 python -m linshare_mcp.main
 ```
+
+#### Remote (SSE)
+
+For the bundled Chat Assistant or any remote/web client. The server listens on `/sse` (event stream) and `/messages` (request channel), both protected by the `Authorization` header (see [MCP Server Access Control](#-mcp-server-access-control-sse)).
+
+```bash
+# Defaults: host=0.0.0.0, port=8000
+uv run python -m linshare_mcp.main --transport sse
+
+# Bind to a specific interface and port
+uv run python -m linshare_mcp.main --transport sse --host 127.0.0.1 --port 8100
+```
+
+Verify it's reachable:
+```bash
+# User mode (Bearer JWT)
+curl -N -H "Authorization: Bearer $LINSHARE_JWT_TOKEN" http://localhost:8000/sse
+
+# Admin mode (Basic auth)
+curl -N -u "$LINSHARE_USERNAME:$LINSHARE_PASSWORD" http://localhost:8000/sse
+```
+
+A successful response keeps the connection open and emits an `event: endpoint` line. A `401` means the `Authorization` header is missing or malformed (the middleware does not verify credentials against LinShare at this point — bad creds surface later when a tool actually calls the LinShare API).
 
 ### 6. Mode Selection (Optional)
 

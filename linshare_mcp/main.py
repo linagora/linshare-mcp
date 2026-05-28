@@ -88,6 +88,7 @@ from .resources import files as resource_files
 if MODE in ["user", "all"]:
     from .tools.user import auth, myspace, users as user_users, files as user_files
     from .tools.user import received_shares, guests, audit as user_audit, contact_lists
+    from .tools.user import shared_spaces as user_shared_spaces
     print(f"📦 Loaded USER tools")
 
 if MODE in ["admin", "all"]:
