@@ -261,9 +261,9 @@ class TestUserReceivedSharesTools:
                 mock_auth.get_user_header.return_value = {"Authorization": "Bearer token"}
                 mock_auth.get_current_user.return_value = {"uuid": "me-uuid"}
                 with patch("linshare_mcp.tools.user.received_shares.requests.get", return_value=mock_resp):
-                    from linshare_mcp.tools.user.received_shares import user_list_my_received_shares
+                    from linshare_mcp.tools.user.received_shares import user_list_received_shares
                     
-                    result = user_list_my_received_shares()
+                    result = user_list_received_shares()
                     
                     assert "Received Shares" in result
                     assert "Received File" in result
@@ -281,9 +281,9 @@ class TestUserReceivedSharesTools:
                 mock_auth.get_user_header.return_value = {"Authorization": "Bearer token"}
                 mock_auth.get_current_user.return_value = {"uuid": "me-uuid"}
                 with patch("linshare_mcp.tools.user.received_shares.requests.post", return_value=mock_resp):
-                    from linshare_mcp.tools.user.received_shares import user_copy_received_share_to_my_space
+                    from linshare_mcp.tools.user.received_shares import user_copy_received_share
                     
-                    result = user_copy_received_share_to_my_space("s-uuid")
+                    result = user_copy_received_share("s-uuid")
                     
                     assert "Share copied to your personal space" in result
                     assert "Copied File" in result

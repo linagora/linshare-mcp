@@ -13,10 +13,25 @@ This is a Model Context Protocol (MCP) server for **LinShare**, an open-source s
 ## � Project Structure
 
 ```text
-mcp-servers/               # <--- PROJECT ROOT
-├── linshare_mcp/          # MCP Server source code
-├── tests/                 # Test suite
-└── linshare-chat-client/  # Chainlit Chat Assistant
+mcp-servers/                       # <--- PROJECT ROOT
+├── linshare_mcp/                  # MCP Server package
+│   ├── tools/user/                # User API tools
+│   ├── tools/admin/               # Admin/Delegation API tools
+│   └── utils/                     # Auth, config, helpers
+├── tests/                         # Unit & integration tests
+├── scripts/                       # Dev utilities
+├── docker/                        # Docker deployment
+│   ├── Dockerfile                 # Unified image (MCP + Chat)
+│   ├── docker-compose.yml         # Full stack orchestration
+│   └── docker-entrypoint.sh       # Container entrypoint
+├── linshare-chat-client/          # Chainlit Chat Assistant
+│   ├── chat_client.py             # Main application
+│   ├── server_sse.py              # SSE server entrypoint
+│   ├── public/                    # Static assets
+│   └── README.md                  # Chat client documentation
+├── .env.example                   # Configuration template
+├── requirements.txt               # Python dependencies
+└── README.md                      # Main project documentation
 ```
 
 ## �🔌 Usage Modes
@@ -25,16 +40,16 @@ The LinShare MCP server can be used in two different networking modes, which aff
 
 ### 1. Local (STDIN) Mode
 Use this mode when the MCP server and the client (e.g., Claude Desktop) are running on the **same machine**.
-- **Upload Tool**: `upload_file_from_local_directory`
+- **Upload Tool**: `user_upload_file`
 - **How it works**: The server directly reads files from a local directory (configured via `LINSHARE_UPLOAD_DIR`).
 - **Best for**: Desktop usage where the AI has access to your local files.
 
 ### 2. Remote (SSE) Mode
-Use this mode when the MCP server runs on a different host than the client (e.g., a containerized backend, the bundled chat client, or any web-based AI assistant).
+Use this mode when the MCP server runs on a **different machine** or inside **Docker**.
 - **Upload Tools**: `user_remote_upload_from_url` or `user_remote_upload_by_chunks`
 - **How it works**: Since the server cannot access the client's local disk, files are either fetched from a public URL or sent in base64-encoded chunks over the MCP protocol.
 - **Authentication**: Access to the `/sse` and `/messages` endpoints is protected by **Headers-based authentication** (see below).
-- **Best for**: Web-based AI assistants or distributed setups.
+- **Best for**: Web-based AI assistants, Docker deployments, or distributed setups.
 
 ## 🤖 Chat Assistant
 
@@ -93,22 +108,22 @@ These tools use the **User API** and require JWT authentication.
 #### My Documents
 | Tool | Description | Example Prompt |
 |------|-------------|----------------|
-| `list_my_documents` | List all files in your personal space. | "Show me my documents" |
-| `user_search_my_documents` | Search for a specific file by name. | "Find files named 'report'" |
-| `upload_file_from_local_directory` | Upload a file from the server's local directory (STDIN mode). | "Upload `report.pdf` to my documents" |
+| `user_list_documents` | List all files in your personal space. | "Show me my documents" |
+| `user_search_documents` | Search for a specific file by name. | "Find files named 'report'" |
+| `user_upload_file` | Upload a file from the server's local directory (STDIN mode). | "Upload `report.pdf` to my documents" |
 | `user_remote_upload_from_url` | Upload a file to LinShare from a public URL (SSE/Remote mode). | "Fetch `https://.../logo.png` and save as `logo.png`" |
 | `user_remote_upload_by_chunks` | Send a local file in chunks (SSE/Remote mode). | "Upload the file I just provided in chunks" |
 | `user_delete_document` | Delete a document by UUID. | "Delete the document `1234-5678`" |
-| `get_user_document_audit` | View activity history for a file. | "Who downloaded my file `contracts.pdf`?" |
+| `user_get_document_audit` | View activity history for a file. | "Who downloaded my file `contracts.pdf`?" |
 
 #### Sharing
 | Tool | Description | Example Prompt |
 |------|-------------|----------------|
-| `share_my_documents` | Share documents with emails or contacts. | "Share `report.pdf` with `jane@example.com`" |
-| `get_user_document_shares` | See who a document is shared with. | "Is `budget.xlsx` shared with anyone?" |
+| `user_share_documents` | Share documents with emails or contacts. | "Share `report.pdf` with `jane@example.com`" |
+| `user_get_document_shares` | See who a document is shared with. | "Is `budget.xlsx` shared with anyone?" |
 | `user_delete_share` | Revoke a share. | "Stop sharing the file with `jane@example.com`" |
-| `user_list_my_received_shares` | List files shared with you. | "What files have been shared with me?" |
-| `user_copy_received_share_to_my_space` | Copy a shared file to your space. | "Save the shared `invoice.pdf` to my documents" |
+| `user_list_received_shares` | List files shared with you. | "What files have been shared with me?" |
+| `user_copy_received_share` | Copy a shared file to your space. | "Save the shared `invoice.pdf` to my documents" |
 
 #### Guests & Contacts
 | Tool | Description | Example Prompt |
@@ -220,11 +235,16 @@ The server supports two transports, selected with `--transport`:
 For Claude Desktop or any client running on the same machine.
 
 ```bash
+# --- Local (STDIN) Mode (default) ---
 # Using uv (recommended)
 uv run python -m linshare_mcp.main
 
 # Or standard python
 python -m linshare_mcp.main
+
+# --- Remote (SSE) Mode ---
+# Run the MCP server as an SSE endpoint (for Docker or remote clients)
+python -m linshare_mcp.main --transport sse --host 0.0.0.0 --port 8000
 ```
 
 #### Remote (SSE)
@@ -356,26 +376,58 @@ Use this configuration if you need **all tools** available.
 
 The fastest way to run the entire LinShare Assistant (Server + Chat) is using Docker Compose.
 
-### 1. Configure Environment
-Ensure your `.env` file at the root is populated with:
-- `LINSHARE_USER_URL`
-- `LINSHARE_JWT_TOKEN` (or Basic Auth credentials)
-- `GOOGLE_API_KEY` (or Local LLM settings)
+### 1. Configure Server Environment (.env)
+
+Create a `.env` file in the **project root** containing server-wide settings (URLs, API Keys).
+
+**Do NOT put user credentials (passwords/JWT) here.**
+
+```bash
+# --- LinShare URLs ---
+LINSHARE_USER_URL=https://your-instance.com/linshare/webservice/rest/user/v5
+LINSHARE_ADMIN_URL=https://your-instance.com/linshare/webservice/rest/delegation/v2
+
+# --- LLM Provider (Choose One) ---
+LLM_PROVIDER=google
+GOOGLE_API_KEY=your_gemini_key
+# DEEPSEEK_API_KEY=...
+# GROQ_API_KEY=...
+
+# --- Audio Transcription (Optional) ---
+# Required for microphone support
+TRANSCRIPTION_PROVIDER=groq
+GROQ_API_KEY=your_groq_key
+```
 
 ### 2. Build and Run
+
 ```bash
-# Build the unified image and start services
+# Navigate to the docker directory
+cd docker
+
+# Start everything (rebuilds if needed)
 docker compose up --build -d
+
+# Stop everything
+docker compose down
 ```
 
-### 3. Access
-- **Chat Assistant**: [http://localhost:8080](http://localhost:8080)
-- **MCP SSE Server**: [http://localhost:8000/sse](http://localhost:8000/sse)
+### 3. Configure User via Interface (Settings ⚙️)
 
-To modify parameters, simply edit the `.env` file and restart:
-```bash
-docker compose up -d
-```
+Open [http://localhost:8090](http://localhost:8090) and click the **Settings (⚙️)** icon (bottom-left).
+
+**Here you configure per-user credentials:**
+
+- **User Mode**:
+    - Toggle **Admin Mode: OFF**
+    - Toggle **Manual JWT: ON** -> Paste your **LinShare JWT Token**.
+- **Admin Mode**:
+    - Toggle **Admin Mode: ON**
+    - Enter **Username** and **Password** (Service Account).
+
+**Why separate?** This allows multiple users to use the same chat assistant with their own credentials, without restarting the server.
+
+
 
 ## ✅ Quality Assurance & Testing
 

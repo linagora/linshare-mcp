@@ -11,11 +11,13 @@ from datetime import datetime, timedelta, timezone
 from .myspace_helpers import _get_share_expiration_policy, _calculate_expiration_timestamp, _validate_expiration_range
 
 @mcp.tool()
-def list_my_documents(
+def user_list_documents(
     limit: int = 50,
-    offset: int = 0
+    offset: int = 0,
+    sort_by: str = "modificationDate",
+    order: str = "desc"
 ) -> str:
-    """[USER API] List documents in your personal space with pagination.
+    """[USER API] List documents in your personal space with pagination and sorting.
     
     🔐 Authentication: JWT token required
     🌐 API Endpoint: User v5 (/documents)
@@ -23,11 +25,18 @@ def list_my_documents(
     Args:
         limit: Max documents to return (default: 50)
         offset: Offset for pagination (default: 0)
+        sort_by: Field to sort by (modificationDate, creationDate, name, size). Default: modificationDate
+        order: Sort order (asc, desc). Default: desc
 
     Returns:
         Formatted list of documents with total count metadata
     """
-    logger.info(f"Tool called: list_my_documents(limit={limit}, offset={offset})")
+    logger.info(f"Tool called: user_list_documents(limit={limit}, offset={offset}, sort={sort_by}, order={order})")
+
+# ... (omitting body as replace_file_format requires explicit chunk, better verify content first?)
+# No, replace_file_content requires TargetContent.
+# I will use multi_replace_file_content to rename safely.
+
 
     if not LINSHARE_USER_URL:
         return "Error: LINSHARE_USER_URL not configured."
@@ -51,12 +60,23 @@ def list_my_documents(
         if not documents:
             return "No documents found in your personal space."
 
+        # Sort documents
+        reverse = (order.lower() == "desc")
+        # Helper to get sort value safely
+        def get_sort_val(d):
+            val = d.get(sort_by)
+            if val is None: return 0 
+            if isinstance(val, str): return val.lower()
+            return val
+            
+        documents.sort(key=get_sort_val, reverse=reverse)
+
         total_count = len(documents)
-        # Apply client-side pagination (API doesn't support it well on v5 /documents)
+        # Apply client-side pagination
         paged_docs = documents[offset : offset + limit]
 
         # Format the response nicely
-        result = f"Personal Documents (Showing {len(paged_docs)} of {total_count} total):\n"
+        result = f"Personal Documents (Showing {len(paged_docs)} of {total_count} total, sorted by {sort_by} {order}):\n"
         if offset + limit < total_count:
             result += f"⚠️ NOTE: List is truncated. Use 'offset={offset + limit}' to see more.\n"
         result += "\n"
@@ -64,9 +84,20 @@ def list_my_documents(
         for i, doc in enumerate(paged_docs, offset + 1):
             full_uuid = doc.get('uuid', 'N/A')
             short_uuid = full_uuid[:8] if full_uuid != 'N/A' else 'N/A'
-            result += f"{i}. {doc.get('name', 'Unnamed')} (Size: {format_file_size(doc.get('size', 0))})\n"
-            result += f"   - [Short UUID: {short_uuid}] [Type: {doc.get('type', 'N/A')}] [Created: {doc.get('creationDate', 'N/A')}]\n"
-            result += f"   - (Full UUID for technical use: {full_uuid})\n"
+            size_str = format_file_size(doc.get('size', 0))
+            
+            # Format dates
+            mod_date = doc.get('modificationDate')
+            mod_str = "N/A"
+            if mod_date:
+                try:
+                    dt = datetime.fromtimestamp(mod_date / 1000, tz=timezone.utc)
+                    mod_str = dt.strftime('%Y-%m-%d %H:%M')
+                except: pass
+
+            result += f"{i}. {doc.get('name', 'Unnamed')} (Size: {size_str})\n"
+            result += f"   - [Short UUID: {short_uuid}] [Type: {doc.get('type', 'N/A')}] [Modified: {mod_str}]\n"
+            result += f"   - (Full UUID: {full_uuid})\n"
             result += "\n"
 
         return result
@@ -78,10 +109,10 @@ def list_my_documents(
         return f"Error: {str(e)}"
 
 @mcp.tool()
-def user_search_my_documents(pattern: str) -> str:
+def user_search_documents(pattern: str) -> str:
     """[USER API] Search for documents in your personal space by name.
     
-    Use this tool instead of 'list_my_documents' if looking for a specific file.
+    Use this tool instead of 'user_list_documents' if looking for a specific file.
     
     🔐 Authentication: JWT token required
     🌐 API Endpoint: User v5 (/documents)
@@ -92,7 +123,7 @@ def user_search_my_documents(pattern: str) -> str:
     Returns:
         Filtered list of matching documents
     """
-    logger.info(f"Tool called: user_search_my_documents(pattern='{pattern}')")
+    logger.info(f"Tool called: user_search_documents(pattern='{pattern}')")
 
     if not LINSHARE_USER_URL:
         return "Error: LINSHARE_USER_URL not configured."
@@ -126,7 +157,7 @@ def user_search_my_documents(pattern: str) -> str:
         return f"Error searching documents: {str(e)}"
 
 @mcp.tool()
-def get_user_document_shares(document_uuid: str) -> str:
+def user_get_document_shares(document_uuid: str) -> str:
     """[USER API] Get detailed information about a document and its shares.
     
     🔐 Authentication: JWT token required
@@ -138,7 +169,7 @@ def get_user_document_shares(document_uuid: str) -> str:
     Returns:
         Formatted information about the document and its active shares
     """
-    logger.info(f"Tool called: get_user_document_shares({document_uuid})")
+    logger.info(f"Tool called: user_get_document_shares({document_uuid})")
 
     if not LINSHARE_USER_URL:
         return "Error: LINSHARE_USER_URL not configured."
@@ -194,7 +225,7 @@ def get_user_document_shares(document_uuid: str) -> str:
         return f"Error: {str(e)}"
 
 @mcp.tool()
-def get_user_document_audit(document_uuid: str) -> str:
+def user_get_document_audit(document_uuid: str) -> str:
     """[USER API] Get the audit trail (activity logs) for a specific document.
     
     🔐 Authentication: JWT token required
@@ -206,7 +237,7 @@ def get_user_document_audit(document_uuid: str) -> str:
     Returns:
         Formatted audit logs showing actvities on the document
     """
-    logger.info(f"Tool called: get_user_document_audit({document_uuid})")
+    logger.info(f"Tool called: user_get_document_audit({document_uuid})")
 
     if not LINSHARE_USER_URL:
         return "Error: LINSHARE_USER_URL not configured."
@@ -260,7 +291,7 @@ def get_user_document_audit(document_uuid: str) -> str:
         return f"Error: {str(e)}"
 
 @mcp.tool()
-def share_my_documents(
+def user_share_documents(
     document_uuids: list[str],
     recipients: list[dict] | None = None,
     recipient_emails: list[str] | None = None,
@@ -286,7 +317,7 @@ def share_my_documents(
     
     Note: You can share with any email address. If the email is not found in the LinShare 
     directory, it will automatically be treated as an anonymous share. You do NOT need 
-     to verify the existence of the email before sharing.
+    to verify the existence of the email before sharing.
 
     Args:
         document_uuids: List of document UUIDs to share (required)
@@ -310,7 +341,7 @@ def share_my_documents(
     Returns:
         Formatted share result including recipient classification (INTERNAL, GUEST, or ANONYMOUS)
     """
-    logger.info(f"Tool called: share_my_documents({len(document_uuids)} documents)")
+    logger.info(f"Tool called: user_share_documents({len(document_uuids)} documents)")
     
     if not LINSHARE_USER_URL:
         return "Error: LINSHARE_USER_URL not configured."
@@ -511,7 +542,7 @@ def share_my_documents(
 
 
 @mcp.tool()
-def upload_file_from_local_directory(
+def user_upload_file(
     filename: str,
     workgroup_uuid: str | None = None,
     folder_uuid: str | None = None,
@@ -533,7 +564,7 @@ def upload_file_from_local_directory(
     Returns:
         Upload confirmation
     """
-    logger.info(f"Tool called: upload_file_from_local_directory({filename})")
+    logger.info(f"Tool called: user_upload_file({filename})")
     
     if not LINSHARE_USER_URL:
         return "Error: LINSHARE_USER_URL not configured."
@@ -956,5 +987,70 @@ def user_remote_upload_by_chunks(
         return f"✅ Chunk {chunk_index + 1}/{total_chunks} received. Waiting for remaining chunks."
         
     except Exception as e:
-        logger.error(f"Error in user_remote_upload_by_chunks: {e}")
         return f"Error: {str(e)}"
+
+# ------------------------------------------------------------------------------
+# TOOL ALIASES (For Robustness against LLM Hallucinations)
+# ------------------------------------------------------------------------------
+
+@mcp.tool()
+def list_user_documents(
+    limit: int = 50, 
+    offset: int = 0, 
+    sort_by: str = None, 
+    order: str = "desc",
+    order_by: str = None
+) -> str:
+    """[ALIAS] Alias for user_list_documents.
+    See user_list_documents for full documentation.
+    """
+    final_sort = sort_by or order_by or "modificationDate"
+    return user_list_documents(limit, offset, final_sort, order)
+
+@mcp.tool()
+def user_search_my_documents(pattern: str = "", keywords: str = None) -> str:
+    """[ALIAS] Alias for user_search_documents.
+    See user_search_documents for full documentation.
+    """
+    final_pattern = pattern or keywords
+    if not final_pattern: return "Error: Must provide pattern or keywords."
+    return user_search_documents(final_pattern)
+
+@mcp.tool()
+def user_list_my_documents(
+    limit: int = 50, 
+    offset: int = 0, 
+    sort_by: str = None, 
+    order: str = "desc",
+    order_by: str = None
+) -> str:
+    """[ALIAS] Alias for user_list_documents.
+    See user_list_documents for full documentation.
+    """
+    final_sort = sort_by or order_by or "modificationDate"
+    return user_list_documents(limit, offset, final_sort, order)
+
+@mcp.tool()
+def user_share_document(
+    document_uuid: str,
+    recipients: list[dict] | None = None,
+    recipient_emails: list[str] | None = None,
+    subject: str = "",
+    message: str = "",
+    secured: bool = False,
+    password: str | None = None,
+    expiration_date: str | int | None = None
+) -> str:
+    """[ALIAS] Alias for user_share_documents (single file).
+    See user_share_documents for full documentation.
+    """
+    return user_share_documents(
+        document_uuids=[document_uuid],
+        recipients=recipients,
+        recipient_emails=recipient_emails,
+        subject=subject,
+        message=message,
+        secured=secured,
+        password=password,
+        expiration_date=expiration_date
+    )
