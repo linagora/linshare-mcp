@@ -74,6 +74,36 @@ import json
 import httpx
 import base64
 
+async def _consume_tool_result(res, tool_name: str) -> str:
+    """Render ImageContent blocks in chat and return text for history."""
+    text_parts = []
+    for block in res.content:
+        btype = type(block).__name__
+        if btype == "ImageContent":
+            try:
+                raw = base64.b64decode(block.data)
+            except Exception as e:
+                text_parts.append(f"[image decode error: {e}]")
+                continue
+            mime = getattr(block, "mimeType", "image/png")
+            ext = "png" if "png" in mime else ("jpeg" if "jpeg" in mime else "bin")
+            image_el = cl.Image(content=raw, name=f"{tool_name}.{ext}", mime=mime, display="inline")
+            await cl.Message(content="", elements=[image_el]).send()
+            # The image is already on-screen via cl.Image. Tell the LLM explicitly NOT to
+            # embed any markdown image link of its own — otherwise it invents a URL and
+            # the chat shows a broken-image placeholder next to the real preview.
+            text_parts.append(
+                "[A preview image was already displayed inline to the user. "
+                "Do NOT include any markdown image link (no ![alt](url) syntax) in your reply. "
+                "Just give a short text confirmation and the file's metadata.]"
+            )
+        elif hasattr(block, "text"):
+            text_parts.append(block.text)
+        else:
+            text_parts.append(str(block))
+    return "\n".join(text_parts) if text_parts else "[empty tool result]"
+
+
 # --- LinShare API Configuration ---
 LINSHARE_USER_URL = os.getenv("LINSHARE_USER_URL") or os.getenv("LINSHARE_BASE_URL", "")
 # Derive AUTH_BASE_URL (strip /user/v5 if present)
@@ -875,8 +905,8 @@ async def on_message(message: cl.Message):
                     print(f"🛠️ Tool Call Request: {tool_name}({args})")
                     await cl.Message(content=f'<span class="tool-call-indicator">🤖 calling `{tool_name}`...</span>').send()
                     res = await session.call_tool(tool_name, arguments=args)
-                    tool_output = res.content[0].text
-                    
+                    tool_output = await _consume_tool_result(res, tool_name)
+
                     # ✂️ Truncate long tool outputs to avoid token overflow
                     if len(tool_output) > 10000:
                         print(f"✂️ Truncating tool output from {len(tool_output)} to 10000 chars")
@@ -887,27 +917,45 @@ async def on_message(message: cl.Message):
                     has_tools = True
                 if has_tools: continue
 
-            # 2. Check for JSON-in-text fallback
+            # 2. Check for JSON-in-text fallback (single OR multiple concatenated objects).
+            # The local LLM sometimes emits a stream like `{...}{...}{...}` to request several
+            # tool calls in one turn — execute each in order rather than dropping them.
             if content and "{" in content and "}" in content:
                 print(f"🔸 JSON detection in turn {iterations}")
-                try:
-                    start = content.find("{")
-                    end = content.rfind("}") + 1
-                    data = json.loads(content[start:end])
-                    
-                    # Handle message field in JSON
-                    if "message" in data and "tool" not in data:
-                        final_content = data["message"]
-                        break
-                        
-                    if "tool" in data:
+                decoder = json.JSONDecoder()
+                parsed_objects = []
+                pos = content.find("{")
+                while pos != -1 and pos < len(content):
+                    try:
+                        obj, end_rel = decoder.raw_decode(content[pos:])
+                        parsed_objects.append(obj)
+                        pos = pos + end_rel
+                        next_brace = content.find("{", pos)
+                        pos = next_brace if next_brace != -1 else -1
+                    except json.JSONDecodeError:
+                        next_brace = content.find("{", pos + 1)
+                        if next_brace == -1:
+                            break
+                        pos = next_brace
+
+                if parsed_objects:
+                    final_message_seen = None
+                    for data in parsed_objects:
+                        if "message" in data and "tool" not in data:
+                            final_message_seen = data["message"]
+                            continue
+                        if "tool" not in data:
+                            continue
                         tool_name = data["tool"]
                         args = data.get("arguments", {})
                         print(f"🛠️ JSON Tool Call Request: {tool_name}({args})")
                         await cl.Message(content=f'<span class="tool-call-indicator">🤖 calling `{tool_name}`...</span>').send()
-                        res = await session.call_tool(tool_name, arguments=args)
-                        tool_output = res.content[0].text
-                        
+                        try:
+                            res = await session.call_tool(tool_name, arguments=args)
+                            tool_output = await _consume_tool_result(res, tool_name)
+                        except Exception as call_err:
+                            tool_output = f"[tool call failed: {call_err}]"
+
                         # ✂️ Truncate long tool outputs to avoid token overflow
                         if len(tool_output) > 10000:
                             print(f"✂️ Truncating tool output from {len(tool_output)} to 10000 chars")
@@ -916,9 +964,12 @@ async def on_message(message: cl.Message):
                         print(f"📦 Tool Result ({len(tool_output)} chars): {tool_output[:100]}...")
                         message_history.append(HumanMessage(content=f"Tool '{tool_name}' returned: {tool_output}\n\nUser request was: '{message.content}'. Please provide the final response to the user now."))
                         has_tools = True
-                    if has_tools: continue
-                except Exception as e:
-                    print(f"⚠️ JSON Parse Error: {e}")
+
+                    if has_tools:
+                        continue
+                    if final_message_seen is not None:
+                        final_content = final_message_seen
+                        break
 
             # 3. If no tools were called and we have content, this is the final answer
             if content and content.strip():
