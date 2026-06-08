@@ -1,0 +1,78 @@
+- generic [ref=e5]:
+  - generic [ref=e6]:
+    - button [ref=e9] [cursor=pointer]:
+      - img
+    - generic [ref=e10]:
+      - button "Lisez-moi" [ref=e11] [cursor=pointer]:
+        - generic [ref=e12]: Lisez-moi
+      - button "Toggle theme" [ref=e13] [cursor=pointer]:
+        - img
+        - generic [ref=e14]: Toggle theme
+  - generic [ref=e18]:
+    - generic [ref=e21]:
+      - generic [ref=e25]:
+        - img "Avatar for LinShare Assistant" [ref=e28]
+        - article [ref=e33]: 🛡️ LinShare Assistant | Hello Abbey! I'm ready to help you manage your files securely.
+      - article [ref=e61]: Search for files matching 'test' inside workgroup 25e2d947-b3aa-4139-8de8-960d8eeef68e
+      - generic [ref=e70]:
+        - img "Avatar for LinShare Assistant" [ref=e73]
+        - article [ref=e78]:
+          - generic [ref=e79]:
+            - text: 🤖 calling
+            - code [ref=e80]: user_search_workgroup_nodes
+            - text: ...
+      - generic [ref=e84]:
+        - img "Avatar for LinShare Assistant" [ref=e87]
+        - generic [ref=e88]:
+          - generic [ref=e91]:
+            - article [ref=e92]: "Here’s what the search returned in workgroup 25e2d947‑b3aa‑4139‑8de8‑960d8eeef68e:"
+            - table [ref=e95]:
+              - rowgroup [ref=e96]:
+                - row "Item Type Modified Path" [ref=e97]:
+                  - columnheader "Item" [ref=e98]
+                  - columnheader "Type" [ref=e99]
+                  - columnheader "Modified" [ref=e100]
+                  - columnheader "Path" [ref=e101]
+              - rowgroup [ref=e102]:
+                - row "test Folder 2026‑05‑18 17:05:24 /test-walid" [ref=e103]:
+                  - cell "test" [ref=e104]
+                  - cell "Folder" [ref=e105]
+                  - cell "2026‑05‑18 17:05:24" [ref=e106]
+                  - cell "/test-walid" [ref=e107]
+                - row "UUID (short) – – 70b78c83…" [ref=e108]:
+                  - cell "UUID (short)" [ref=e109]
+                  - cell "–" [ref=e110]
+                  - cell "–" [ref=e111]
+                  - cell "70b78c83…" [ref=e112]
+            - article [ref=e113]: "Only a single folder named test matches the query. Let me know if you’d like to:"
+            - list [ref=e114]:
+              - listitem [ref=e115]: Browse the folder’s contents
+              - listitem [ref=e116]: Download any files inside it
+              - listitem [ref=e117]: Share the folder or its contents with someone
+              - listitem [ref=e118]: Get more details (full UUID, audit logs, etc.)
+            - article [ref=e119]: Just tell me what you’d like to do next!
+          - button [ref=e121] [cursor=pointer]:
+            - img
+      - article [ref=e134]: List my workgroups
+      - generic [ref=e141]:
+        - img "Avatar for LinShare Assistant" [ref=e144]
+        - article [ref=e149]:
+          - generic [ref=e150]:
+            - text: 🤖 calling
+            - code [ref=e151]: user_list_my_shared_spaces
+            - text: ...
+    - generic [ref=e35]:
+      - generic [ref=e36]:
+        - textbox "Tapez votre message ici..." [active] [ref=e38]
+        - generic [ref=e39]:
+          - generic [ref=e40]:
+            - generic [ref=e41]:
+              - button [disabled]:
+                - img
+            - generic [ref=e43]:
+              - img
+            - button [disabled]:
+              - img
+          - button [ref=e64] [cursor=pointer]:
+            - img [ref=e136]
+      - article [ref=e152]: Les LLMs peuvent se tromper. Vérifiez les réponses.

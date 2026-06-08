@@ -473,6 +473,7 @@ async def on_audio_end(*args, **kwargs):
         await cl.Message(content="⚠️ Audio ended but no data buffered.").send()
         return
         
+    transcribing_msg = None
     try:
         if not GROQ_API_KEY:
             await cl.Message(content="⚠️ Groq API Key missing. Cannot transcribe.").send()
@@ -538,7 +539,8 @@ async def on_audio_end(*args, **kwargs):
         audio_file = io.BytesIO(buffer)
         audio_file.name = fname
         
-        await cl.Message(content=f"🎧 Transcribing audio ({len(buffer)} bytes, ext: {ext})...").send()
+        transcribing_msg = cl.Message(content=f"🎧 Transcribing audio ({len(buffer)} bytes, ext: {ext})...")
+        await transcribing_msg.send()
         
         # 2. Call Transcription Provider
         if TRANSCRIPTION_PROVIDER == "groq" and GROQ_API_KEY:
@@ -571,6 +573,9 @@ async def on_audio_end(*args, **kwargs):
         print(f"❌ Transcription failed: {e}")
         await cl.Message(content=f"❌ Transcription failed: {e}").send()
     finally:
+        # Remove the "Transcribing audio…" indicator now that we're done (success or error).
+        if transcribing_msg:
+            await transcribing_msg.remove()
         cl.user_session.set("audio_buffer", None)
 
 async def get_linshare_jwt_from_oidc():

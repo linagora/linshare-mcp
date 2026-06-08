@@ -1,0 +1,263 @@
+- generic [ref=e5]:
+  - generic [ref=e6]:
+    - button [ref=e9] [cursor=pointer]:
+      - img
+    - generic [ref=e10]:
+      - button "Lisez-moi" [ref=e11] [cursor=pointer]:
+        - generic [ref=e12]: Lisez-moi
+      - button "Toggle theme" [ref=e13] [cursor=pointer]:
+        - img
+        - generic [ref=e14]: Toggle theme
+  - generic [ref=e18]:
+    - generic [ref=e21]:
+      - generic [ref=e25]:
+        - img "Avatar for LinShare Assistant" [ref=e28]
+        - article [ref=e33]: 🛡️ LinShare Assistant | Hello Abbey! I'm ready to help you manage your files securely.
+      - article [ref=e61]: i am looking for test inside all workgroups
+      - generic [ref=e70]:
+        - img "Avatar for LinShare Assistant" [ref=e73]
+        - article [ref=e78]:
+          - generic [ref=e79]:
+            - text: 🤖 calling
+            - code [ref=e80]: user_search_all_my_workgroups
+            - text: ...
+      - generic [ref=e85]:
+        - img "Avatar for LinShare Assistant" [ref=e88]
+        - generic [ref=e89]:
+          - generic [ref=e92]:
+            - article [ref=e93]: Here’s everything that contains “test” in the workgroups you belong to.
+            - heading "Summary" [level=3] [ref=e94]
+            - table [ref=e97]:
+              - rowgroup [ref=e98]:
+                - row "Workgroup (short UUID) Matches" [ref=e99]:
+                  - columnheader "Workgroup (short UUID)" [ref=e100]
+                  - columnheader "Matches" [ref=e101]
+              - rowgroup [ref=e102]:
+                - row "amy wg (18f5f481) 5" [ref=e103]:
+                  - cell "amy wg (18f5f481)" [ref=e104]
+                  - cell "5" [ref=e105]
+                - row "Automation workgroup (0f96efef) 1" [ref=e106]:
+                  - cell "Automation workgroup (0f96efef)" [ref=e107]
+                  - cell "1" [ref=e108]
+                - row "Automation workgroup (95b91aed) 3" [ref=e109]:
+                  - cell "Automation workgroup (95b91aed)" [ref=e110]
+                  - cell "3" [ref=e111]
+                - row "move files test (4ab0860c) 4" [ref=e112]:
+                  - cell "move files test (4ab0860c)" [ref=e113]
+                  - cell "4" [ref=e114]
+                - row "original (80628f66) 2" [ref=e115]:
+                  - cell "original (80628f66)" [ref=e116]
+                  - cell "2" [ref=e117]
+                - row "test (d7336036) 1" [ref=e118]:
+                  - cell "test (d7336036)" [ref=e119]
+                  - cell "1" [ref=e120]
+                - row "Test Analyze Data (561c7d31) 3" [ref=e121]:
+                  - cell "Test Analyze Data (561c7d31)" [ref=e122]
+                  - cell "3" [ref=e123]
+                - row "test fabien (27d2f5cb) 1" [ref=e124]:
+                  - cell "test fabien (27d2f5cb)" [ref=e125]
+                  - cell "1" [ref=e126]
+                - row "test mobile antho (5ee1ef98) 2" [ref=e127]:
+                  - cell "test mobile antho (5ee1ef98)" [ref=e128]
+                  - cell "2" [ref=e129]
+                - row "test workgroup (df5e0ab9) 1" [ref=e130]:
+                  - cell "test workgroup (df5e0ab9)" [ref=e131]
+                  - cell "1" [ref=e132]
+                - row "Test workgroup (128ed5f0) 1" [ref=e133]:
+                  - cell "Test workgroup (128ed5f0)" [ref=e134]
+                  - cell "1" [ref=e135]
+                - row "test‑walid (25e2d947) 1" [ref=e136]:
+                  - cell "test‑walid (25e2d947)" [ref=e137]
+                  - cell "1" [ref=e138]
+            - heading "Detailed matches" [level=3] [ref=e139]
+            - heading "amy wg – 18f5f481" [level=4] [ref=e140]:
+              - text: amy wg –
+              - code [ref=e141]: 18f5f481
+            - list [ref=e142]:
+              - listitem [ref=e143]:
+                - text: Folder – Test folder –
+                - code [ref=e144]: 3b5af4f8
+                - text: "– Modified 2025‑09‑16 15:21 UTC – Path:"
+                - code [ref=e145]: /amy wg
+              - listitem [ref=e146]:
+                - text: Folder – test –
+                - code [ref=e147]: ca6fd215
+                - text: "– Modified 2025‑09‑16 15:21 UTC – Path:"
+                - code [ref=e148]: /amy wg/Test folder
+              - listitem [ref=e149]:
+                - text: Folder – test –
+                - code [ref=e150]: 546d752b
+                - text: "– Modified 2025‑06‑03 14:38 UTC – Path:"
+                - code [ref=e151]: /amy wg/folder 1
+              - listitem [ref=e152]:
+                - text: Folder – Test –
+                - code [ref=e153]: dbffc82b
+                - text: "– Modified 2025‑05‑30 10:19 UTC – Path:"
+                - code [ref=e154]: /amy wg
+              - listitem [ref=e155]:
+                - text: Document – TESTTING.pdf –
+                - code [ref=e156]: 508b699e
+                - text: "– 104.5 KB – Modified 2025‑05‑30 10:19 UTC – Path:"
+                - code [ref=e157]: /amy wg/Test
+            - heading "Automation workgroup – 0f96efef" [level=4] [ref=e158]:
+              - text: Automation workgroup –
+              - code [ref=e159]: 0f96efef
+            - list [ref=e160]:
+              - listitem [ref=e161]:
+                - text: Folder – test –
+                - code [ref=e162]: 2b2491cb
+                - text: "– Modified 2026‑01‑23 10:22 UTC – Path:"
+                - code [ref=e163]: /Automation workgroup
+            - heading "Automation workgroup – 95b91aed" [level=4] [ref=e164]:
+              - text: Automation workgroup –
+              - code [ref=e165]: 95b91aed
+            - list [ref=e166]:
+              - listitem [ref=e167]:
+                - text: Document – test.docx –
+                - code [ref=e168]: 0bae7b0f
+                - text: "– 9.8 KB – Modified 2025‑10‑16 11:05 UTC – Path:"
+                - code [ref=e169]: /Automation workgroup/hhh
+              - listitem [ref=e170]:
+                - text: Document – test (1).docx –
+                - code [ref=e171]: 278cf44b
+                - text: "– 9.8 KB – Modified 2025‑10‑16 11:05 UTC – Path:"
+                - code [ref=e172]: /Automation workgroup
+              - listitem [ref=e173]:
+                - text: Document – test.docx –
+                - code [ref=e174]: 4feb65a7
+                - text: "– 9.8 KB – Modified 2025‑10‑16 11:04 UTC – Path:"
+                - code [ref=e175]: /Automation workgroup
+            - heading "move files test – 4ab0860c" [level=4] [ref=e176]:
+              - text: move files test –
+              - code [ref=e177]: 4ab0860c
+            - list [ref=e178]:
+              - listitem [ref=e179]:
+                - text: Document – move file test 3 –
+                - code [ref=e180]: 262cf305
+                - text: "– 1.8 MB – Modified 2026‑03‑13 14:52 UTC – Path:"
+                - code [ref=e181]: /move files test
+              - listitem [ref=e182]:
+                - text: Document – move file test 4 –
+                - code [ref=e183]: 41dfbccf
+                - text: "– 1.6 MB – Modified 2026‑03‑13 14:52 UTC – Path:"
+                - code [ref=e184]: /move files test
+              - listitem [ref=e185]:
+                - text: Document – move test 2 –
+                - code [ref=e186]: 72ac283b
+                - text: "– 6.8 MB – Modified 2026‑03‑13 14:51 UTC – Path:"
+                - code [ref=e187]: /move files test
+              - listitem [ref=e188]:
+                - text: Document – move test –
+                - code [ref=e189]: 1cdcf261
+                - text: "– 1.8 MB – Modified 2026‑03‑13 14:46 UTC – Path:"
+                - code [ref=e190]: /move files test
+            - heading "original – 80628f66" [level=4] [ref=e191]:
+              - text: original –
+              - code [ref=e192]: 80628f66
+            - list [ref=e193]:
+              - listitem [ref=e194]:
+                - text: Folder – test 2 –
+                - code [ref=e195]: ddd6affc
+                - text: "– Modified 2025‑12‑03 18:01 UTC – Path:"
+                - code [ref=e196]: /original/3/New folder
+              - listitem [ref=e197]:
+                - text: Folder – test 3 –
+                - code [ref=e198]: 3daeade9
+                - text: "– Modified 2025‑12‑03 18:01 UTC – Path:"
+                - code [ref=e199]: /original/3/New folder/test 2
+            - heading "test – d7336036" [level=4] [ref=e200]:
+              - text: test –
+              - code [ref=e201]: d7336036
+            - list [ref=e202]:
+              - listitem [ref=e203]:
+                - text: Document – test.docx –
+                - code [ref=e204]: c69cfcce
+                - text: "– 9.8 KB – Modified 2025‑11‑06 19:09 UTC – Path:"
+                - code [ref=e205]: /test/New folder
+            - heading "Test Analyze Data – 561c7d31" [level=4] [ref=e206]:
+              - text: Test Analyze Data –
+              - code [ref=e207]: 561c7d31
+            - list [ref=e208]:
+              - listitem [ref=e209]:
+                - text: Document – testAntho.jpg –
+                - code [ref=e210]: 9a9510ec
+                - text: "– 399.1 KB – Modified 2026‑03‑05 15:25 UTC – Path:"
+                - code [ref=e211]: /Test Analyze Data
+              - listitem [ref=e212]:
+                - text: Document – test.jpeg –
+                - code [ref=e213]: c077a0da
+                - text: "– 162.7 KB – Modified 2026‑03‑05 15:25 UTC – Path:"
+                - code [ref=e214]: /Test Analyze Data
+              - listitem [ref=e215]:
+                - text: Folder – Test Antho –
+                - code [ref=e216]: eabc038f
+                - text: "– Modified 2026‑03‑02 16:59 UTC – Path:"
+                - code [ref=e217]: /Test Analyze Data
+            - heading "test fabien – 27d2f5cb" [level=4] [ref=e218]:
+              - text: test fabien –
+              - code [ref=e219]: 27d2f5cb
+            - list [ref=e220]:
+              - listitem [ref=e221]:
+                - text: Document – Test rename file –
+                - code [ref=e222]: 715a92cb
+                - text: "– 9.8 KB – Modified 2025‑10‑24 13:16 UTC – Path:"
+                - code [ref=e223]: /test fabien
+            - heading "test mobile antho – 5ee1ef98" [level=4] [ref=e224]:
+              - text: test mobile antho –
+              - code [ref=e225]: 5ee1ef98
+            - list [ref=e226]:
+              - listitem [ref=e227]:
+                - text: Folder – test –
+                - code [ref=e228]: eecb9e36
+                - text: "– Modified 2026‑04‑23 13:25 UTC – Path:"
+                - code [ref=e229]: /test mobile antho
+              - listitem [ref=e230]:
+                - text: Document – frtesttxtet.jpg –
+                - code [ref=e231]: 14d12332
+                - text: "– 140.4 KB – Modified 2026‑04‑15 16:06 UTC – Path:"
+                - code [ref=e232]: /test mobile antho/test
+            - heading "test workgroup – df5e0ab9" [level=4] [ref=e233]:
+              - text: test workgroup –
+              - code [ref=e234]: df5e0ab9
+            - list [ref=e235]:
+              - listitem [ref=e236]:
+                - text: Folder – test –
+                - code [ref=e237]: e50d5d8d
+                - text: "– Modified 2026‑05‑04 08:54 UTC – Path:"
+                - code [ref=e238]: /test workgroup
+            - heading "Test workgroup – 128ed5f0" [level=4] [ref=e239]:
+              - text: Test workgroup –
+              - code [ref=e240]: 128ed5f0
+            - list [ref=e241]:
+              - listitem [ref=e242]:
+                - text: Folder – test fabien –
+                - code [ref=e243]: cd760664
+                - text: "– Modified 2025‑06‑10 14:31 UTC – Path:"
+                - code [ref=e244]: /Test workgroup
+            - heading "test‑walid – 25e2d947" [level=4] [ref=e245]:
+              - text: test‑walid –
+              - code [ref=e246]: 25e2d947
+            - list [ref=e247]:
+              - listitem [ref=e248]:
+                - text: Folder – test –
+                - code [ref=e249]: 70b78c83
+                - text: "– Modified 2026‑05‑18 17:05 UTC – Path:"
+                - code [ref=e250]: /test‑walid
+            - article [ref=e251]: If you need any of these items downloaded, moved, shared, or deleted, just let me know which one(s) and the action you’d like to perform!
+          - button [ref=e253] [cursor=pointer]:
+            - img
+    - generic [ref=e35]:
+      - generic [ref=e36]:
+        - textbox "Tapez votre message ici..." [active] [ref=e38]
+        - generic [ref=e39]:
+          - generic [ref=e40]:
+            - button [ref=e42] [cursor=pointer]:
+              - img
+            - button [ref=e44] [cursor=pointer]:
+              - img
+            - button [ref=e45] [cursor=pointer]:
+              - img
+          - generic [ref=e46]:
+            - button [disabled]:
+              - img
+      - article [ref=e254]: Les LLMs peuvent se tromper. Vérifiez les réponses.

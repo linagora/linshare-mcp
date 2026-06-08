@@ -1,0 +1,66 @@
+- generic [ref=e5]:
+  - generic [ref=e6]:
+    - button [ref=e9] [cursor=pointer]:
+      - img
+    - generic [ref=e10]:
+      - button "Lisez-moi" [ref=e11] [cursor=pointer]:
+        - generic [ref=e12]: Lisez-moi
+      - button "Toggle theme" [ref=e13] [cursor=pointer]:
+        - img
+        - generic [ref=e14]: Toggle theme
+  - generic [active] [ref=e18]:
+    - generic [ref=e21]:
+      - generic [ref=e25]:
+        - img "Avatar for LinShare Assistant" [ref=e28]
+        - article [ref=e67]: 🛡️ LinShare Assistant | Hello Abbey! I'm ready to help you manage your files securely.
+      - article [ref=e61]: search for mcp-car.png in sharespace and display content
+      - generic [ref=e71]:
+        - img "Avatar for LinShare Assistant" [ref=e74]
+        - article [ref=e79]:
+          - generic [ref=e80]:
+            - text: 🤖 calling
+            - code [ref=e81]: user_search_all_my_workgroups
+            - text: ...
+      - generic [ref=e85]:
+        - img "Avatar for LinShare Assistant" [ref=e88]
+        - article [ref=e93]:
+          - generic [ref=e94]:
+            - text: 🤖 calling
+            - code [ref=e95]: user_get_workgroup_file_preview
+            - text: ...
+      - generic [ref=e99]:
+        - img "Avatar for LinShare Assistant" [ref=e102]
+        - img "user_get_workgroup_file_preview.png" [ref=e108] [cursor=pointer]
+      - generic [ref=e113]:
+        - img "Avatar for LinShare Assistant" [ref=e116]
+        - generic [ref=e117]:
+          - generic [ref=e120]:
+            - article [ref=e121]: The file mcp-car.png was found in the test‑walid shared space and its preview has been displayed above.
+            - article [ref=e122]: File details
+            - list [ref=e123]:
+              - listitem [ref=e124]: "Workgroup: test‑walid"
+              - listitem [ref=e125]:
+                - text: "Document UUID:"
+                - code [ref=e126]: 7220125d...
+              - listitem [ref=e127]: "Size: 66.1 KB"
+              - listitem [ref=e128]: "Last modified: 2026‑05‑18 17:04:53"
+              - listitem [ref=e129]:
+                - text: "Location:"
+                - code [ref=e130]: /test-walid/mcp-car.png
+          - button [ref=e132] [cursor=pointer]:
+            - img
+    - generic [ref=e35]:
+      - generic [ref=e36]:
+        - textbox "Tapez votre message ici..." [ref=e38]
+        - generic [ref=e39]:
+          - generic [ref=e40]:
+            - button [ref=e42] [cursor=pointer]:
+              - img
+            - button [ref=e44] [cursor=pointer]:
+              - img
+            - button [ref=e45] [cursor=pointer]:
+              - img
+          - generic [ref=e46]:
+            - button [disabled]:
+              - img
+      - article [ref=e133]: Les LLMs peuvent se tromper. Vérifiez les réponses.

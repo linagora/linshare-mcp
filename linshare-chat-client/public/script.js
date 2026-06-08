@@ -1,5 +1,20 @@
 // public/script.js
 
+// Force the browser to (re)load the custom LinShare favicon. Chainlit emits
+// <link rel="icon" href="/favicon"> with no version, so browsers keep serving
+// the previously cached default icon. Pointing it at a versioned URL busts that
+// cache. Bump FAVICON_VERSION whenever public/favicon.png changes.
+const FAVICON_VERSION = "4";
+function refreshFavicon() {
+    document.querySelectorAll('link[rel~="icon"]').forEach(l => l.parentNode.removeChild(l));
+    const link = document.createElement('link');
+    link.rel = 'icon';
+    link.type = 'image/png';
+    link.href = '/favicon?v=' + FAVICON_VERSION;
+    document.head.appendChild(link);
+}
+refreshFavicon();
+
 function fillChatInput(text) {
     const input = document.getElementById('chat-input');
     if (!input) {

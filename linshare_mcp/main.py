@@ -27,62 +27,73 @@ from .utils.logging import logger
 
 # --- Authentication Middleware ---
 import base64
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
-from starlette.responses import Response
 
-class AuthMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        # We only protect SSE related endpoints
-        if request.url.path in ["/sse", "/messages"]:
-            print(f"🔒 Auth Check: {request.method} {request.url.path}")
-            print(f"🔍 DEBUG Headers: {dict(request.headers)}")
-            auth_header = request.headers.get("Authorization")
-            
-            if not auth_header:
-                print(f"🔒 Auth Failed: Missing Authorization header for {request.url.path}")
-                return Response("Unauthorized: Missing Authorization header", status_code=401)
-            
-            from .utils.auth import request_auth
-            from requests.auth import HTTPBasicAuth
-            
-            # 1. Handle Admin Basic Auth
-            if auth_header.startswith("Basic "):
-                try:
-                    encoded = auth_header.split(" ")[1]
-                    decoded = base64.b64decode(encoded).decode("utf-8")
-                    user, password = decoded.split(":")
-                    
-                    # Set the context for the current request
-                    request_auth.set({
-                        'type': 'Basic',
-                        'auth': HTTPBasicAuth(user, password)
-                    })
-                    
-                    print(f"🔒 Admin Auth Context Set: {user}")
-                    # Note: We now ALWAYS proceed and let the LinShare API call fail if the creds are bad
-                    return await call_next(request)
-                except Exception as e:
-                    print(f"🔒 Admin Auth Error: {e}")
 
-            # 2. Handle User JWT (Bearer)
-            if auth_header.startswith("Bearer "):
-                token = auth_header.split(" ")[1]
-                if len(token.split(".")) == 3:
-                     request_auth.set({
-                         'type': 'Bearer',
-                         'token': token
-                     })
-                     print("🔒 User Auth Context Set: JWT detected")
-                     return await call_next(request)
-                else:
-                    print("🔒 User Auth Failed: Invalid JWT format")
+class AuthMiddleware:
+    """Pure ASGI auth middleware for the /sse and /messages endpoints.
 
-            print(f"🔒 Auth Failed: No valid credentials for mode {MODE.upper()}")
-            status_msg = f"Unauthorized: Invalid credentials for mode {MODE}"
-            return Response(status_msg, status_code=401)
-            
-        return await call_next(request)
+    This is intentionally NOT a Starlette ``BaseHTTPMiddleware``: that base
+    class buffers the response and is incompatible with SSE streaming, which
+    surfaces as ``AssertionError: Unexpected message: http.response.start``
+    and silently drops tool results. A raw ASGI middleware leaves the ``send``
+    channel untouched, so the SSE stream flows through unmodified.
+
+    Credentials are stashed in the ``request_auth`` contextvar before the
+    request is handled; because the downstream app is awaited in the same
+    task, the value propagates to the tool call and stays isolated per request.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or scope.get("path") not in ("/sse", "/messages"):
+            await self.app(scope, receive, send)
+            return
+
+        from .utils.auth import request_auth
+        from requests.auth import HTTPBasicAuth
+
+        headers = {k.decode("latin-1").lower(): v.decode("latin-1")
+                   for k, v in scope.get("headers", [])}
+        auth_header = headers.get("authorization")
+
+        async def reject(detail: str):
+            await send({"type": "http.response.start", "status": 401,
+                        "headers": [(b"content-type", b"text/plain; charset=utf-8")]})
+            await send({"type": "http.response.body", "body": detail.encode()})
+
+        if not auth_header:
+            logger.warning(f"Auth failed: missing Authorization header for {scope['path']}")
+            await reject("Unauthorized: Missing Authorization header")
+            return
+
+        # 1. Admin Basic Auth
+        if auth_header.startswith("Basic "):
+            try:
+                decoded = base64.b64decode(auth_header.split(" ", 1)[1]).decode("utf-8")
+                user, password = decoded.split(":", 1)
+                request_auth.set({"type": "Basic", "auth": HTTPBasicAuth(user, password)})
+                logger.info(f"Admin auth context set: {user}")
+                # Always proceed; let the LinShare API reject bad creds.
+                await self.app(scope, receive, send)
+                return
+            except Exception as e:
+                logger.warning(f"Admin auth error: {e}")
+
+        # 2. User JWT (Bearer)
+        if auth_header.startswith("Bearer "):
+            token = auth_header.split(" ", 1)[1]
+            if len(token.split(".")) == 3:
+                request_auth.set({"type": "Bearer", "token": token})
+                logger.info("User auth context set: JWT detected")
+                await self.app(scope, receive, send)
+                return
+            logger.warning("User auth failed: invalid JWT format")
+
+        logger.warning(f"Auth failed: no valid credentials for mode {MODE.upper()}")
+        await reject(f"Unauthorized: Invalid credentials for mode {MODE}")
 
 # Conditionally import tool modules based on mode
 from .tools import files as common_files

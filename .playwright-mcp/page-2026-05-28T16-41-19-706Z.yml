@@ -1,0 +1,29 @@
+- generic [ref=e5]:
+  - generic [ref=e6]:
+    - button [ref=e9] [cursor=pointer]:
+      - img
+    - generic [ref=e10]:
+      - button "Lisez-moi" [ref=e11] [cursor=pointer]:
+        - generic [ref=e12]: Lisez-moi
+      - button "Toggle theme" [ref=e13] [cursor=pointer]:
+        - img
+        - generic [ref=e14]: Toggle theme
+  - generic [ref=e18]:
+    - generic [ref=e25]:
+      - img "Avatar for LinShare Assistant" [ref=e28]
+      - article [ref=e33]: 🛡️ LinShare Assistant | Hello Abbey! I'm ready to help you manage your files securely.
+    - generic [ref=e35]:
+      - generic [ref=e36]:
+        - textbox "Tapez votre message ici..." [active] [ref=e38]
+        - generic [ref=e39]:
+          - generic [ref=e40]:
+            - button [ref=e42] [cursor=pointer]:
+              - img
+            - button [ref=e44] [cursor=pointer]:
+              - img
+            - button [ref=e45] [cursor=pointer]:
+              - img
+          - generic [ref=e46]:
+            - button [disabled]:
+              - img
+      - article [ref=e49]: Les LLMs peuvent se tromper. Vérifiez les réponses.

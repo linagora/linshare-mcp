@@ -1,0 +1,14 @@
+[   24628ms] [WARNING] [Cozy] Bridge not initialized (not inside Cozy iframe) @ https://user.linshare-6-4-on-commit.integration-linshare.org/new/js/app.ed055f4a.js:0
+[   41416ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://user.linshare-6-4-on-commit.integration-linshare.org/linshare/webservice/rest/user/v5/authentication/authorized:0
+[   41463ms] [WARNING] LinshareFunctionalityService : getFunctionalities @ https://user.linshare-6-4-on-commit.integration-linshare.org/new/js/app.ed055f4a.js:0
+[   51158ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://user.linshare-6-4-on-commit.integration-linshare.org/linshare/webservice/rest/user/v5/functionalities:0
+[   51184ms] [ERROR] Error getting all functionalities @ https://user.linshare-6-4-on-commit.integration-linshare.org/new/js/app.ed055f4a.js:0
+[   51184ms] [ERROR] Error getting all functionalities Error: Error getting all functionalities
+    at https://user.linshare-6-4-on-commit.integration-linshare.org/new/js/app.ed055f4a.js:1:1004864
+    at Generator.next (<anonymous>)
+    at a (https://user.linshare-6-4-on-commit.integration-linshare.org/new/js/chunk-vendors.5d8fd301.js:24:66961) @ https://user.linshare-6-4-on-commit.integration-linshare.org/new/js/app.ed055f4a.js:0
+[   51187ms] [ERROR] Error: Error getting all functionalities
+    at https://user.linshare-6-4-on-commit.integration-linshare.org/new/js/app.ed055f4a.js:1:1004864
+    at Generator.next (<anonymous>)
+    at a (https://user.linshare-6-4-on-commit.integration-linshare.org/new/js/chunk-vendors.5d8fd301.js:24:66961) @ https://user.linshare-6-4-on-commit.integration-linshare.org/new/js/chunk-vendors.5d8fd301.js:63
+[   51638ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://user.linshare-6-4-on-commit.integration-linshare.org/new/login:0

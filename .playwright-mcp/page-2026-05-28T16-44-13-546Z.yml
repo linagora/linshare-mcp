@@ -1,0 +1,50 @@
+- generic [ref=e5]:
+  - generic [ref=e6]:
+    - button [ref=e9] [cursor=pointer]:
+      - img
+    - generic [ref=e10]:
+      - button "Lisez-moi" [ref=e11] [cursor=pointer]:
+        - generic [ref=e12]: Lisez-moi
+      - button "Toggle theme" [ref=e13] [cursor=pointer]:
+        - img
+        - generic [ref=e14]: Toggle theme
+  - generic [ref=e18]:
+    - generic [ref=e21]:
+      - generic [ref=e36]:
+        - img "Avatar for LinShare Assistant" [ref=e39]
+        - article [ref=e77]: 🛡️ LinShare Assistant | Hello Abbey! I'm ready to help you manage your files securely.
+      - article [ref=e71]: Show me a preview of the file with UUID 9a9510ec-1463-4f01-9b48-bd60490df29f inside workgroup 561c7d31-e74c-42c4-87c0-ad236f47b682 using size small
+      - generic [ref=e81]:
+        - img "Avatar for LinShare Assistant" [ref=e84]
+        - article [ref=e89]:
+          - generic [ref=e90]:
+            - text: 🤖 calling
+            - code [ref=e91]: user_get_workgroup_file_preview
+            - text: ...
+      - generic [ref=e95]:
+        - img "Avatar for LinShare Assistant" [ref=e98]
+        - img "user_get_workgroup_file_preview.png" [ref=e104] [cursor=pointer]
+      - generic [ref=e108]:
+        - img "Avatar for LinShare Assistant" [ref=e111]
+        - generic [ref=e112]:
+          - generic [ref=e115]:
+            - article [ref=e116]: "Here’s the small‑size preview of the requested file:"
+            - article [ref=e117]
+            - article [ref=e121]: Let me know if you need a larger view, want to download the file, or would like to share it with someone.
+          - button [ref=e123] [cursor=pointer]:
+            - img
+    - generic [ref=e45]:
+      - generic [ref=e46]:
+        - textbox "Tapez votre message ici..." [active] [ref=e48]
+        - generic [ref=e49]:
+          - generic [ref=e50]:
+            - button [ref=e52] [cursor=pointer]:
+              - img
+            - button [ref=e54] [cursor=pointer]:
+              - img
+            - button [ref=e55] [cursor=pointer]:
+              - img
+          - generic [ref=e56]:
+            - button [disabled]:
+              - img
+      - article [ref=e124]: Les LLMs peuvent se tromper. Vérifiez les réponses.
